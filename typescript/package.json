@@ -1,0 +1,10 @@
+{
+  "name": "parse-hcl",
+  "version": "0.0.1",
+  "description": "Lightweight HCL parser focused on identifying and classifying blocks. Supports common Terraform blocks (resource, variable, output, locals, etc.) for tooling and automation.",
+  "main": "index.js",
+  "repository": "https://github.com/sigmoid-hq/parse-hcl",
+  "author": "Juan Lee <juan.lee@sigmoid.us>",
+  "license": "Apache-2.0",
+  "private": false
+}

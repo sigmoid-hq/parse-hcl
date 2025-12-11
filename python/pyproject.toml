@@ -1,0 +1,7 @@
+[project]
+name = "parse-hcl"
+version = "0.1.0"
+description = "Lightweight HCL parser focused on identifying and classifying blocks. Supports common Terraform blocks (resource, variable, output, locals, etc.) for tooling and automation."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
