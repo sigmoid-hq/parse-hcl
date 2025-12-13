@@ -6,6 +6,7 @@ const BLOCK_HEADER =
 
 export class BlockScanner {
     scan(content: string, source: string): HclBlock[] {
+        BLOCK_HEADER.lastIndex = 0;
         const blocks: HclBlock[] = [];
         let match: RegExpExecArray | null;
 

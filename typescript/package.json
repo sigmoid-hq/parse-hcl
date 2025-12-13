@@ -9,10 +9,12 @@
     "license": "Apache-2.0",
     "private": false,
     "scripts": {
-        "build": "tsc -p tsconfig.json"
+        "build": "tsc -p tsconfig.json",
+        "test": "vitest run"
     },
     "devDependencies": {
         "@types/node": "^25.0.1",
-        "typescript": "^5.9.3"
+        "typescript": "^5.9.3",
+        "vitest": "^4.0.15"
     }
 }
