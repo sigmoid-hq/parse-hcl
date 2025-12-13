@@ -1,6 +1,7 @@
 # Sigmoid-specific files
 PROJECT_DESCRIPTION.md
 references/
+output/
 
 # Logs
 logs

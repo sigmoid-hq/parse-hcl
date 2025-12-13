@@ -30,6 +30,13 @@ console.log(dirResult.combined);      // 통합 결과
 console.log(dirResult.files[0].path); // 파일별 결과
 ```
 
+3) 예제 실행 및 결과 확인
+```bash
+cd typescript
+yarn example
+# ./output/combined.json, ./output/combined.yaml 등으로 샘플 파싱 결과 생성
+```
+
 ## 파싱 규칙 메모
 - 블록 스캔 시 문자열/주석을 고려해 중괄호를 밸런싱하여 본문을 확보합니다.
 - 블록 내부는 상위 레벨의 `key = value` 할당과 중첩 블록을 구분하여 `attributes`와 `blocks`로 분리합니다.
