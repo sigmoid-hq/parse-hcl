@@ -1,3 +1,7 @@
+# Sigmoid-specific files
+PROJECT_DESCRIPTION.md
+references/
+
 # Logs
 logs
 *.log
