@@ -5,6 +5,10 @@ export function readTextFile(filePath: string): string {
     return fs.readFileSync(filePath, 'utf-8');
 }
 
+export function readJsonFile<T = unknown>(filePath: string): T {
+    return JSON.parse(readTextFile(filePath)) as T;
+}
+
 export function listTerraformFiles(dirPath: string): string[] {
     const entries = fs.readdirSync(dirPath, { withFileTypes: true });
 

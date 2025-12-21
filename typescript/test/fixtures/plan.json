@@ -1,0 +1,41 @@
+{
+    "format_version": "1.0",
+    "terraform_version": "1.6.0",
+    "planned_values": {
+        "root_module": {
+            "resources": [
+                {
+                    "address": "aws_s3_bucket.demo",
+                    "mode": "managed",
+                    "type": "aws_s3_bucket",
+                    "name": "demo",
+                    "provider_name": "registry.terraform.io/hashicorp/aws",
+                    "values": {
+                        "bucket": "demo-bucket"
+                    }
+                }
+            ]
+        }
+    },
+    "resource_changes": [
+        {
+            "address": "aws_s3_bucket.demo",
+            "mode": "managed",
+            "type": "aws_s3_bucket",
+            "name": "demo",
+            "provider_name": "registry.terraform.io/hashicorp/aws",
+            "change": {
+                "actions": [
+                    "create"
+                ],
+                "before": null,
+                "after": {
+                    "bucket": "demo-bucket"
+                },
+                "after_unknown": {
+                    "arn": true
+                }
+            }
+        }
+    ]
+}

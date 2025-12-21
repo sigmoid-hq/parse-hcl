@@ -5,7 +5,8 @@ Terraform HCL 블록을 TypeScript로 파싱하기 위한 경량 파서입니다
 ## 주요 특징
 - 최상위 블록 스캔 후 블록 종류별 파서로 분리 처리
 - 리소스/데이터/모듈/프로바이더/테라폼 설정/로컬/변수/출력 파싱 지원
-- JSON/YAML 직렬화 유틸리티 제공
+- tfvars/tfstate/tfplan(JSON) 파싱 지원
+- JSON/YAML 직렬화 및 의존성 그래프 export 지원
 - 디렉토리 파싱 시 파일별 결과와 통합 결과를 선택적으로 반환
 
 ## 사용 방법
@@ -18,16 +19,32 @@ yarn build
 
 2) 코드에서 사용
 ```ts
-import { TerraformParser, toJson, toYamlDocument } from './dist';
+import {
+    TerraformParser,
+    toJson,
+    toYamlDocument,
+    toJsonExport,
+    buildDependencyGraph,
+    TfVarsParser,
+    TfStateParser,
+    TfPlanParser
+} from './dist';
 
 const parser = new TerraformParser();
 const single = parser.parseFile('examples/main.tf');
 console.log(toJson(single));
 console.log(toYamlDocument(single));
+console.log(toJsonExport(single)); // { version, document, graph }
+console.log(buildDependencyGraph(single));
 
 const dirResult = parser.parseDirectory('examples', { aggregate: true, includePerFile: true });
 console.log(dirResult.combined);      // 통합 결과
 console.log(dirResult.files[0].path); // 파일별 결과
+
+// 다른 Terraform 아티팩트 파싱
+const tfvars = new TfVarsParser().parseFile('examples/variables.auto.tfvars');
+const state = new TfStateParser().parseFile('terraform.tfstate');
+const plan = new TfPlanParser().parseFile('plan.json'); // terraform show -json 출력
 ```
 
 3) 예제 실행 및 결과 확인
