@@ -8,23 +8,55 @@ export type BlockKind =
     | 'data'
     | 'locals';
 
-export type AttributeKind = 'string' | 'number' | 'bool' | 'array' | 'object' | 'expression';
+export type ExpressionKind = 'traversal' | 'function_call' | 'template' | 'for_expr' | 'unknown';
 
-export interface AttributeValue {
-    kind: AttributeKind;
+export type Reference =
+    | { kind: 'variable'; name: string }
+    | { kind: 'local'; name: string }
+    | { kind: 'module_output'; module: string; name: string }
+    | { kind: 'data'; data_type: string; name: string; attribute?: string }
+    | { kind: 'resource'; resource_type: string; name: string; attribute?: string }
+    | { kind: 'path'; name: string };
+
+export interface LiteralValue {
+    type: 'literal';
+    value: string | number | boolean | null;
     raw: string;
-    value?: string | number | boolean | unknown[] | Record<string, unknown>;
 }
 
+export interface ObjectValue {
+    type: 'object';
+    value?: Record<string, Value>;
+    raw: string;
+    references?: Reference[];
+}
+
+export interface ArrayValue {
+    type: 'array';
+    value?: Value[];
+    raw: string;
+    references?: Reference[];
+}
+
+export interface ExpressionValue {
+    type: 'expression';
+    kind: ExpressionKind;
+    raw: string;
+    references?: Reference[];
+    parsed?: Record<string, unknown>;
+}
+
+export type Value = LiteralValue | ObjectValue | ArrayValue | ExpressionValue;
+
 export interface ParsedBody {
-    attributes: Record<string, AttributeValue>;
+    attributes: Record<string, Value>;
     blocks: NestedBlock[];
 }
 
 export interface NestedBlock {
     type: string;
     labels: string[];
-    attributes: Record<string, AttributeValue>;
+    attributes: Record<string, Value>;
     blocks: NestedBlock[];
     raw: string;
 }
@@ -38,7 +70,7 @@ export interface HclBlock {
 }
 
 export interface TerraformSettingsBlock {
-    properties: Record<string, AttributeValue>;
+    properties: Record<string, Value>;
     raw: string;
     source: string;
 }
@@ -46,33 +78,41 @@ export interface TerraformSettingsBlock {
 export interface ProviderBlock {
     name: string;
     alias?: string;
-    properties: Record<string, AttributeValue>;
+    properties: Record<string, Value>;
     raw: string;
     source: string;
 }
 
 export interface ModuleBlock {
     name: string;
-    source?: AttributeValue;
-    variables: Record<string, AttributeValue>;
+    properties: Record<string, Value>;
     raw: string;
-    sourceFile: string;
+    source: string;
 }
 
 export interface ResourceBlock {
     type: string;
     name: string;
-    properties: Record<string, AttributeValue>;
+    properties: Record<string, Value>;
     blocks: NestedBlock[];
-    meta: Record<string, AttributeValue>;
+    dynamic_blocks: DynamicBlock[];
+    meta: Record<string, Value>;
     raw: string;
     source: string;
+}
+
+export interface DynamicBlock {
+    label: string;
+    for_each?: Value;
+    iterator?: string;
+    content: Record<string, Value>;
+    raw: string;
 }
 
 export interface DataBlock {
     dataType: string;
     name: string;
-    properties: Record<string, AttributeValue>;
+    properties: Record<string, Value>;
     blocks: NestedBlock[];
     raw: string;
     source: string;
@@ -85,7 +125,7 @@ export interface VariableBlock {
     default?: unknown;
     validation?: {
         condition?: string;
-        errorMessage?: string;
+        error_message?: string;
     };
     sensitive?: boolean;
     raw: string;
@@ -95,7 +135,7 @@ export interface VariableBlock {
 export interface OutputBlock {
     name: string;
     description?: string;
-    value?: AttributeValue;
+    value?: Value;
     sensitive?: boolean;
     raw: string;
     source: string;
@@ -103,7 +143,8 @@ export interface OutputBlock {
 
 export interface LocalValue {
     name: string;
-    value: AttributeValue;
+    type: Value['type'];
+    value: Value;
     raw: string;
     source: string;
 }

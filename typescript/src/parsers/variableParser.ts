@@ -1,15 +1,19 @@
 import { HclBlock, VariableBlock } from '../types/blocks';
 import { parseBlockBody } from '../utils/bodyParser';
+import { literalBoolean, literalString } from '../utils/valueHelpers';
 
 export class VariableParser {
     parse(block: HclBlock): VariableBlock {
         const name = block.labels[0] || 'unknown';
         const parsed = parseBlockBody(block.body);
 
-        const description = parsed.attributes.description?.value as string | undefined;
-        const type = parsed.attributes.type?.raw;
-        const defaultValue = parsed.attributes.default?.value ?? parsed.attributes.default?.raw;
-        const sensitive = parsed.attributes.sensitive?.value === true;
+        const description = literalString(parsed.attributes.description) ?? parsed.attributes.description?.raw;
+        const type = literalString(parsed.attributes.type) ?? parsed.attributes.type?.raw;
+        const defaultValue =
+            parsed.attributes.default?.type === 'literal'
+                ? parsed.attributes.default.value
+                : parsed.attributes.default?.raw;
+        const sensitive = literalBoolean(parsed.attributes.sensitive);
         const validation = this.extractValidation(parsed.blocks);
 
         return {
@@ -31,12 +35,10 @@ export class VariableParser {
         }
 
         const condition =
-            (validationBlock.attributes.condition?.raw ?? validationBlock.attributes.condition?.value) as
-                | string
-                | undefined;
+            literalString(validationBlock.attributes.condition) ?? validationBlock.attributes.condition?.raw;
         const errorMessage =
-            (validationBlock.attributes.error_message?.value ??
-                validationBlock.attributes.error_message?.raw) as string | undefined;
+            literalString(validationBlock.attributes.error_message) ??
+            validationBlock.attributes.error_message?.raw;
 
         if (!condition && !errorMessage) {
             return undefined;
@@ -44,7 +46,7 @@ export class VariableParser {
 
         return {
             condition,
-            errorMessage
+            error_message: errorMessage
         };
     }
 }

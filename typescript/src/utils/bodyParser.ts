@@ -1,8 +1,8 @@
-import { AttributeValue, NestedBlock, ParsedBody } from '../types/blocks';
+import { NestedBlock, ParsedBody, Value } from '../types/blocks';
 import { classifyValue } from './valueClassifier';
 
 export function parseBlockBody(body: string): ParsedBody {
-    const attributes: Record<string, AttributeValue> = {};
+    const attributes: Record<string, Value> = {};
     const blocks: NestedBlock[] = [];
 
     let index = 0;
@@ -121,7 +121,6 @@ function readValue(text: string, start: number): { raw: string; end: number } {
     let index = skipWhitespaceAndComments(text, start);
     const valueStart = index;
 
-    // Heredoc support (<<EOF ... EOF)
     if (text.slice(index, index + 2) === '<<') {
         const newlineIndex = text.indexOf('\n', index);
         const firstLine = newlineIndex === -1 ? text.slice(index) : text.slice(index, newlineIndex);

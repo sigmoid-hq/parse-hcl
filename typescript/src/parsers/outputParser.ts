@@ -1,14 +1,15 @@
 import { HclBlock, OutputBlock } from '../types/blocks';
 import { parseBlockBody } from '../utils/bodyParser';
+import { literalBoolean, literalString } from '../utils/valueHelpers';
 
 export class OutputParser {
     parse(block: HclBlock): OutputBlock {
         const name = block.labels[0] || 'unknown';
         const parsed = parseBlockBody(block.body);
 
-        const description = parsed.attributes.description?.value as string | undefined;
+        const description = literalString(parsed.attributes.description) ?? parsed.attributes.description?.raw;
         const value = parsed.attributes.value;
-        const sensitive = parsed.attributes.sensitive?.value === true;
+        const sensitive = literalBoolean(parsed.attributes.sensitive);
 
         return {
             name,

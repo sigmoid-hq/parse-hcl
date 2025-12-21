@@ -7,6 +7,7 @@ import {
 } from '../types/blocks';
 import { HclBlock } from '../types/blocks';
 import { parseBlockBody } from '../utils/bodyParser';
+import { literalString } from '../utils/valueHelpers';
 
 const META_KEYS = new Set(['count', 'for_each', 'provider', 'depends_on']);
 
@@ -28,7 +29,7 @@ export class ProviderParser {
 
         return {
             name,
-            alias: parsed.attributes.alias?.value as string | undefined,
+            alias: literalString(parsed.attributes.alias) ?? parsed.attributes.alias?.raw,
             properties: parsed.attributes,
             raw: block.raw,
             source: block.source
@@ -40,14 +41,12 @@ export class ModuleParser {
     parse(block: HclBlock): ModuleBlock {
         const name = block.labels[0] || 'unnamed';
         const parsed = parseBlockBody(block.body);
-        const { source, ...variables } = parsed.attributes;
 
         return {
             name,
-            source,
-            variables,
+            properties: parsed.attributes,
             raw: block.raw,
-            sourceFile: block.source
+            source: block.source
         };
     }
 }
@@ -71,11 +70,37 @@ export class ResourceParser {
             type: type || 'unknown',
             name: name || 'unnamed',
             properties,
-            blocks: parsed.blocks,
+            blocks: parsed.blocks.filter((child) => child.type !== 'dynamic'),
+            dynamic_blocks: this.extractDynamicBlocks(parsed.blocks),
             meta,
             raw: block.raw,
             source: block.source
         };
+    }
+
+    private extractDynamicBlocks(blocks: ReturnType<typeof parseBlockBody>['blocks']): ResourceBlock['dynamic_blocks'] {
+        const dynamicBlocks: ResourceBlock['dynamic_blocks'] = [];
+
+        for (const block of blocks) {
+            if (block.type !== 'dynamic') {
+                continue;
+            }
+
+            const label = block.labels[0] || 'dynamic';
+            const for_each = block.attributes.for_each;
+            const iterator = literalString(block.attributes.iterator);
+            const contentBlock = block.blocks.find((child) => child.type === 'content');
+
+            dynamicBlocks.push({
+                label,
+                for_each,
+                iterator,
+                content: contentBlock?.attributes || {},
+                raw: block.raw
+            });
+        }
+
+        return dynamicBlocks;
     }
 }
 

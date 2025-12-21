@@ -21,12 +21,13 @@ describe('TerraformParser', () => {
         const bucket = doc.resource[0];
         expect(bucket.type).toBe('aws_s3_bucket');
         expect(bucket.name).toBe('demo');
-        expect(bucket.meta.count?.value).toBe(2);
-        expect(bucket.properties.bucket?.kind).toBe('string');
+        expect(bucket.meta.count?.type).toBe('literal');
+        expect(bucket.meta.count?.raw).toBe('2');
+        expect(bucket.properties.bucket?.type).toBe('expression');
         expect(bucket.properties.count).toBeUndefined();
 
         expect(doc.output).toHaveLength(1);
-        expect(doc.output[0].value?.kind).toBe('expression');
+        expect(doc.output[0].value?.type).toBe('expression');
     });
 
     it('aggregates multiple files when parsing a directory', () => {
