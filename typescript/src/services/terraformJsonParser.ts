@@ -65,7 +65,7 @@ export class TerraformJsonParser {
                 name,
                 description: typeof cfg.description === 'string' ? cfg.description : undefined,
                 type: typeof cfg.type === 'string' ? cfg.type : undefined,
-                default: cfg.default as unknown,
+                default: cfg.default !== undefined ? convertJsonValue(cfg.default) : undefined,
                 validation: undefined,
                 sensitive: typeof cfg.sensitive === 'boolean' ? cfg.sensitive : undefined,
                 raw: JSON.stringify(cfg),

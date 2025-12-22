@@ -1,6 +1,25 @@
+/**
+ * Scanner for identifying top-level HCL blocks in Terraform configuration files.
+ * Handles block detection, label extraction, and body isolation.
+ */
+
 import { BlockKind, HclBlock } from '../types/blocks';
+import { ParseError, offsetToLocation } from './errors';
+import {
+    findMatchingBrace,
+    isQuote,
+    readIdentifier,
+    readQuotedString,
+    skipHeredoc,
+    skipString,
+    skipWhitespaceAndComments
+} from './hclLexer';
 import { logger } from './logger';
 
+/**
+ * Set of known Terraform block types.
+ * Unknown block types are categorized as 'unknown'.
+ */
 const KNOWN_BLOCKS = new Set([
     'terraform',
     'locals',
@@ -16,28 +35,95 @@ const KNOWN_BLOCKS = new Set([
     'terraform_data'
 ]);
 
-const BLOCK_HEADER = /([A-Za-z_][\w-]*)\s*(?:"([^"]+)")?(?:\s*"([^"]+)")?\s*\{/g;
+/**
+ * Options for block scanning.
+ */
+export interface ScanOptions {
+    /** Whether to throw ParseError on syntax errors (default: false, logs warning instead) */
+    strict?: boolean;
+}
 
+/**
+ * Scanner for extracting top-level HCL blocks from Terraform files.
+ *
+ * @example
+ * ```typescript
+ * const scanner = new BlockScanner();
+ * const blocks = scanner.scan(hclContent, 'main.tf');
+ * for (const block of blocks) {
+ *   console.log(`Found ${block.kind} block: ${block.labels.join('.')}`);
+ * }
+ * ```
+ */
 export class BlockScanner {
-    scan(content: string, source: string): HclBlock[] {
-        BLOCK_HEADER.lastIndex = 0;
+    /**
+     * Scans HCL content and extracts all top-level blocks.
+     *
+     * @param content - The HCL source content to scan
+     * @param source - The source file path (for error reporting)
+     * @param options - Scanning options
+     * @returns Array of parsed HCL blocks
+     * @throws {ParseError} If strict mode is enabled and syntax errors are found
+     */
+    scan(content: string, source: string, options?: ScanOptions): HclBlock[] {
         const blocks: HclBlock[] = [];
-        let match: RegExpExecArray | null;
+        const length = content.length;
+        let index = 0;
+        const strict = options?.strict ?? false;
 
-        while ((match = BLOCK_HEADER.exec(content)) !== null) {
-            const keyword = match[1];
-            const kind = (KNOWN_BLOCKS.has(keyword) ? keyword : 'unknown') as BlockKind;
-            const labels = [match[2], match[3]].filter(Boolean) as string[];
-            const braceIndex = content.indexOf('{', match.index);
+        while (index < length) {
+            index = skipWhitespaceAndComments(content, index);
 
-            if (braceIndex < 0) {
-                logger.warn(`'${kind}' block in ${source} is missing '{'`);
+            // Skip standalone strings (not part of block headers)
+            if (isQuote(content[index])) {
+                index = skipString(content, index);
                 continue;
             }
 
+            const identifierStart = index;
+            const keyword = readIdentifier(content, index);
+
+            if (!keyword) {
+                index++;
+                continue;
+            }
+
+            index += keyword.length;
+            index = skipWhitespaceAndComments(content, index);
+
+            // Read block labels (quoted strings)
+            const labels: string[] = [];
+            while (isQuote(content[index])) {
+                const { text, end } = readQuotedString(content, index);
+                labels.push(text);
+                index = skipWhitespaceAndComments(content, end);
+            }
+
+            // Check for opening brace
+            if (content[index] !== '{') {
+                // Not a block header, continue searching
+                index = identifierStart + keyword.length;
+                continue;
+            }
+
+            const braceIndex = index;
             const endIndex = findMatchingBrace(content, braceIndex);
-            const raw = normalizeRaw(content.slice(match.index, endIndex + 1));
+
+            if (endIndex === -1) {
+                const location = offsetToLocation(content, braceIndex);
+                const message = `Unclosed block '${keyword}': missing closing '}'`;
+
+                if (strict) {
+                    throw new ParseError(message, source, location);
+                }
+
+                logger.warn(`${message} in ${source}:${location.line}:${location.column}`);
+                break;
+            }
+
+            const raw = normalizeRaw(content.slice(identifierStart, endIndex + 1));
             const body = content.slice(braceIndex + 1, endIndex);
+            const kind = (KNOWN_BLOCKS.has(keyword) ? keyword : 'unknown') as BlockKind;
 
             blocks.push({
                 kind,
@@ -48,81 +134,38 @@ export class BlockScanner {
                 source
             });
 
-            BLOCK_HEADER.lastIndex = endIndex + 1;
+            index = endIndex + 1;
         }
 
         return blocks;
     }
 }
 
-function findMatchingBrace(content: string, startIndex: number): number {
-    let depth = 0;
-    let inString = false;
-    let stringChar: string | null = null;
-
-    for (let i = startIndex; i < content.length; i += 1) {
-        const char = content[i];
-        const next = content[i + 1];
-        const prev = content[i - 1];
-
-        if (!inString) {
-            if (char === '"' || char === "'") {
-                inString = true;
-                stringChar = char;
-                continue;
-            }
-
-            if (char === '/' && next === '*') {
-                const end = content.indexOf('*/', i + 2);
-                if (end === -1) {
-                    return content.length - 1;
-                }
-                i = end + 1;
-                continue;
-            }
-
-            if (char === '/' && next === '/') {
-                const end = content.indexOf('\n', i + 2);
-                i = end === -1 ? content.length : end;
-                continue;
-            }
-
-            if (char === '#') {
-                const end = content.indexOf('\n', i + 1);
-                i = end === -1 ? content.length : end;
-                continue;
-            }
-
-            if (char === '{') {
-                depth += 1;
-            } else if (char === '}') {
-                depth -= 1;
-                if (depth === 0) {
-                    return i;
-                }
-            }
-        } else if (char === stringChar && prev !== '\\') {
-            inString = false;
-            stringChar = null;
-        }
-    }
-
-    return content.length - 1;
-}
-
+/**
+ * Normalizes raw block content for consistent formatting.
+ * - Removes common leading indentation
+ * - Normalizes whitespace around '=' operators
+ * - Trims trailing whitespace from lines
+ *
+ * @param raw - The raw block content
+ * @returns Normalized block content
+ */
 function normalizeRaw(raw: string): string {
     const trimmed = raw.trim();
     const lines = trimmed.split(/\r?\n/);
+
     if (lines.length === 1) {
         return lines[0];
     }
 
+    // Calculate minimum indentation (excluding first line and empty lines)
     const indents = lines
         .slice(1)
         .filter((line) => line.trim().length > 0)
         .map((line) => (line.match(/^(\s*)/)?.[1].length ?? 0));
     const minIndent = indents.length ? Math.min(...indents) : 0;
 
+    // Normalize alignment around '=' operators
     const normalizeAlignment = (line: string): string =>
         line
             .replace(/\s{2,}=\s*/g, ' = ')

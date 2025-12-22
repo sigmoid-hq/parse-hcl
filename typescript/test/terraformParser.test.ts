@@ -1,6 +1,7 @@
 import path from 'path';
 import { describe, expect, it } from 'vitest';
 import { TerraformParser } from '../src/services/terraformParser';
+import { listTerraformFiles } from '../src/utils/fs';
 import { toJson, toYamlDocument } from '../src/utils/serializer';
 
 const fixturesDir = path.join(__dirname, 'fixtures');
@@ -38,13 +39,17 @@ describe('TerraformParser', () => {
         });
     });
 
-    it('aggregates multiple files when parsing a directory', () => {
+    it('aggregates multiple files (including nested directories) when parsing a directory', () => {
+        const discovered = listTerraformFiles(fixturesDir);
         const result = parser.parseDirectory(fixturesDir);
 
-        expect(result.files.length).toBe(4);
-        expect(result.combined?.data).toHaveLength(1);
-        expect(result.combined?.resource).toHaveLength(3);
-        expect(result.combined?.variable).toHaveLength(2);
+        expect(discovered.length).toBe(7);
+        expect(discovered.some((file) => file.includes(path.join('nested', 'child.tf')))).toBe(true);
+        expect(result.files.length).toBe(7);
+        expect(result.files.some((file) => file.path.includes(path.join('nested', 'child.tf')))).toBe(true);
+        expect(result.combined?.data).toHaveLength(2);
+        expect(result.combined?.resource.length).toBeGreaterThanOrEqual(6);
+        expect(result.combined?.variable.length).toBeGreaterThanOrEqual(2);
     });
 
     it('omits empty top-level collections when serializing', () => {

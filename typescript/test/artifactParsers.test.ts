@@ -38,6 +38,7 @@ describe('Terraform artifact parsers', () => {
 
 describe('Dependency graph builder', () => {
     const mainFile = path.join(fixturesDir, 'main.tf');
+    const dependsOnFile = path.join(fixturesDir, 'depends_on.tf');
 
     it('builds nodes and edges from parsed document', () => {
         const doc = new TerraformParser().parseFile(mainFile);
@@ -51,5 +52,15 @@ describe('Dependency graph builder', () => {
         expect(graph.nodes.some((node) => node.id === outputNodeId)).toBe(true);
         expect(graph.edges.some((edge) => edge.to === localNodeId && edge.from === resourceNodeId)).toBe(true);
         expect(graph.edges.some((edge) => edge.to === resourceNodeId && edge.from === outputNodeId)).toBe(true);
+    });
+
+    it('connects depends_on references', () => {
+        const doc = new TerraformParser().parseFile(dependsOnFile);
+        const graph = buildDependencyGraph(doc);
+
+        const baseId = 'resource.aws_s3_bucket.base';
+        const dependentId = 'resource.aws_s3_bucket.dependent';
+
+        expect(graph.edges.some((edge) => edge.from === dependentId && edge.to === baseId)).toBe(true);
     });
 });
