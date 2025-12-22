@@ -73,6 +73,12 @@ yarn cli --file examples/vars.auto.tfvars.json --format json --no-prune
 - 블록 내부는 상위 레벨의 `key = value` 할당과 중첩 블록을 구분하여 `attributes`와 `blocks`로 분리합니다.
 - 값은 문자열/숫자/불리언/배열/오브젝트/표현식으로 분류해 `kind`, `raw`, `value` 필드에 담습니다. 복잡한 표현식은 `raw` 그대로 유지합니다.
 
+## 테스트
+```bash
+cd typescript
+yarn test
+```
+
 ## 디렉토리 파싱 옵션
 - `aggregate` (기본값: `true`): 모든 파일 결과를 합쳐 단일 `TerraformDocument`로 반환합니다.
 - `includePerFile` (기본값: `true`): 파일별 파싱 결과 배열을 함께 반환합니다.

@@ -2,11 +2,12 @@ import path from 'path';
 import { describe, expect, it } from 'vitest';
 import { TerraformParser } from '../src/services/terraformParser';
 import { TfVarsParser } from '../src/services/artifactParsers';
-import { toJson } from '../src/utils/serializer';
+import { toJson, toJsonExport } from '../src/utils/serializer';
 
 const fixturesDir = path.join(__dirname, 'fixtures');
 const tfJsonFile = path.join(fixturesDir, 'config.tf.json');
 const tfvarsJsonFile = path.join(fixturesDir, 'vars.auto.tfvars.json');
+const mainTfFile = path.join(fixturesDir, 'main.tf');
 
 describe('Terraform JSON parser', () => {
     const parser = new TerraformParser();
@@ -38,5 +39,13 @@ describe('tfvars json parser', () => {
         expect(full.includes('unknown')).toBe(true);
         const pruned = toJson(doc);
         expect(pruned.includes('unknown')).toBe(false);
+    });
+
+    it('keeps empty arrays when prune is disabled on export', () => {
+        const parser = new TerraformParser();
+        const doc = parser.parseFile(mainTfFile);
+        const exported = toJsonExport(doc, { pruneEmpty: false });
+        expect(exported.includes('dynamic_blocks')).toBe(true);
+        expect(exported.includes('blocks')).toBe(true);
     });
 });
