@@ -1,9 +1,11 @@
 import path from 'path';
 import { describe, expect, it } from 'vitest';
 import { TerraformParser } from '../src/services/terraformParser';
+import { toJson } from '../src/utils/serializer';
 
 const fixturesDir = path.join(__dirname, 'fixtures');
 const mainFile = path.join(fixturesDir, 'main.tf');
+const dataFile = path.join(fixturesDir, 'data.tf');
 
 describe('TerraformParser', () => {
     const parser = new TerraformParser();
@@ -37,5 +39,15 @@ describe('TerraformParser', () => {
         expect(result.combined?.data).toHaveLength(1);
         expect(result.combined?.resource).toHaveLength(1);
         expect(result.combined?.variable).toHaveLength(1);
+    });
+
+    it('omits empty top-level collections when serializing', () => {
+        const doc = parser.parseFile(dataFile);
+        const json = toJson(doc);
+
+        expect(json.includes('"locals"')).toBe(false);
+        expect(json.includes('"variable"')).toBe(false);
+        expect(json.includes('"resource"')).toBe(false);
+        expect(json.includes('"data"')).toBe(true);
     });
 });

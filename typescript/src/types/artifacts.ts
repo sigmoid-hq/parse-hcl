@@ -25,7 +25,7 @@ export interface DependencyGraph {
 
 export interface TerraformExport {
     version: string;
-    document: TerraformDocument;
+    document: Partial<TerraformDocument>;
     graph: DependencyGraph;
 }
 
