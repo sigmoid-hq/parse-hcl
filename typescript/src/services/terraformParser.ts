@@ -19,6 +19,7 @@ import {
 } from '../parsers/genericParser';
 import { OutputParser } from '../parsers/outputParser';
 import { VariableParser } from '../parsers/variableParser';
+import { TerraformJsonParser } from './terraformJsonParser';
 
 export class TerraformParser {
     private readonly scanner = new BlockScanner();
@@ -31,8 +32,14 @@ export class TerraformParser {
     private readonly dataParser = new DataParser();
     private readonly terraformSettingsParser = new TerraformSettingsParser();
     private readonly genericBlockParser = new GenericBlockParser();
+    private readonly jsonParser = new TerraformJsonParser();
 
     parseFile(filePath: string): TerraformDocument {
+        if (filePath.endsWith('.tf.json')) {
+            logger.info(`Parsing Terraform JSON file: ${filePath}`);
+            return this.jsonParser.parseFile(filePath);
+        }
+
         logger.info(`Parsing Terraform file: ${filePath}`);
         const content = readTextFile(filePath);
         const blocks = this.scanner.scan(content, filePath);
@@ -106,7 +113,7 @@ export class TerraformParser {
         };
     }
 
-    private combine(documents: TerraformDocument[]): TerraformDocument {
+    combine(documents: TerraformDocument[]): TerraformDocument {
         const combined = createEmptyDocument();
 
         for (const doc of documents) {

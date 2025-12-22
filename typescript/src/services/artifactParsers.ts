@@ -9,11 +9,26 @@ import {
     TerraformStateResource,
     TfVarsDocument
 } from '../types/artifacts';
+import { Value } from '../types/blocks';
 import { parseBlockBody } from '../utils/bodyParser';
 import { readJsonFile, readTextFile } from '../utils/fs';
+import { convertJsonValue } from './terraformJsonParser';
 
 export class TfVarsParser {
     parseFile(filePath: string): TfVarsDocument {
+        if (filePath.endsWith('.json')) {
+            const json = readJsonFile<Record<string, unknown>>(filePath);
+            const assignments: Record<string, Value> = {};
+            for (const [key, val] of Object.entries(json)) {
+                assignments[key] = convertJsonValue(val);
+            }
+            return {
+                source: filePath,
+                raw: JSON.stringify(json),
+                assignments
+            };
+        }
+
         const raw = readTextFile(filePath);
         const parsed = parseBlockBody(raw);
 

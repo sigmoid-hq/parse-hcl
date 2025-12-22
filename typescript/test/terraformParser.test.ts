@@ -31,15 +31,20 @@ describe('TerraformParser', () => {
 
         expect(doc.output).toHaveLength(1);
         expect(doc.output[0].value?.type).toBe('expression');
+        expect(doc.output[0].value?.references?.[0]).toMatchObject({
+            kind: 'resource',
+            resource_type: 'aws_s3_bucket',
+            name: 'demo'
+        });
     });
 
     it('aggregates multiple files when parsing a directory', () => {
         const result = parser.parseDirectory(fixturesDir);
 
-        expect(result.files.length).toBe(3);
+        expect(result.files.length).toBe(4);
         expect(result.combined?.data).toHaveLength(1);
-        expect(result.combined?.resource).toHaveLength(2);
-        expect(result.combined?.variable).toHaveLength(1);
+        expect(result.combined?.resource).toHaveLength(3);
+        expect(result.combined?.variable).toHaveLength(2);
     });
 
     it('omits empty top-level collections when serializing', () => {
@@ -69,6 +74,14 @@ describe('TerraformParser', () => {
         // check list indentation and nested map indentation
         expect(lines.some((line) => line.startsWith('  - type: aws_s3_bucket'))).toBe(true);
         expect(lines.some((line) => line.startsWith('    name: demo'))).toBe(true);
+    });
+
+    it('omits empty nested arrays like blocks/dynamic_blocks', () => {
+        const doc = parser.parseFile(mainFile);
+        const json = toJson(doc);
+
+        expect(json.includes('"blocks"')).toBe(false);
+        expect(json.includes('dynamic_blocks')).toBe(false);
     });
 
     it('parses dynamic/import/moved/check blocks', () => {

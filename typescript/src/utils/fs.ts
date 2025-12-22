@@ -13,7 +13,10 @@ export function listTerraformFiles(dirPath: string): string[] {
     const entries = fs.readdirSync(dirPath, { withFileTypes: true });
 
     return entries
-        .filter((entry) => entry.isFile() && entry.name.endsWith('.tf'))
+        .filter(
+            (entry) =>
+                entry.isFile() && (entry.name.endsWith('.tf') || entry.name.endsWith('.tf.json'))
+        )
         .map((entry) => path.join(dirPath, entry.name));
 }
 

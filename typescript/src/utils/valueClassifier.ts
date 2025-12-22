@@ -124,29 +124,38 @@ function extractReferences(raw: string, kind: ExpressionKind): Reference[] {
 }
 
 function parseTraversalReferences(raw: string): Reference[] {
-    const tokens = raw.split(/[^A-Za-z0-9_.]/).filter(Boolean);
+    const sanitized = raw.replace(/\[[^\]]*]/g, '');
+    const matches = sanitized.match(/[A-Za-z_][\w]*(?:\.[A-Za-z_][\w]*)+/g) || [];
     const refs: Reference[] = [];
 
-    for (const token of tokens) {
-        if (token.startsWith('var.')) {
-            refs.push({ kind: 'variable', name: token.split('.')[1] || token });
-        } else if (token.startsWith('local.')) {
-            refs.push({ kind: 'local', name: token.split('.')[1] || token });
-        } else if (token.startsWith('module.')) {
-            const [, moduleName, attribute] = token.split('.');
-            if (moduleName && attribute) {
-                refs.push({ kind: 'module_output', module: moduleName, name: attribute });
-            }
-        } else if (token.startsWith('data.')) {
-            const [, dataType, dataName, attribute] = token.split('.');
-            if (dataType && dataName) {
-                refs.push({ kind: 'data', data_type: dataType, name: dataName, attribute });
-            }
-        } else if (token.includes('.')) {
-            const [resourceType, resourceName, attribute] = token.split('.');
+    for (const match of matches) {
+        const parts = match.split('.');
+        if (parts[0] === 'var' && parts[1]) {
+            refs.push({ kind: 'variable', name: parts[1] });
+            continue;
+        }
+        if (parts[0] === 'local' && parts[1]) {
+            refs.push({ kind: 'local', name: parts[1] });
+            continue;
+        }
+        if (parts[0] === 'module' && parts[1]) {
+            const attribute = parts.slice(2).join('.') || undefined;
+            refs.push({ kind: 'module_output', module: parts[1], name: attribute || parts[1] });
+            continue;
+        }
+        if (parts[0] === 'data' && parts[1] && parts[2]) {
+            const attribute = parts.slice(3).join('.') || parts[2];
+            refs.push({ kind: 'data', data_type: parts[1], name: parts[2], attribute });
+            continue;
+        }
+        if (parts[0] === 'path' && parts[1]) {
+            refs.push({ kind: 'path', name: parts[1] });
+            continue;
+        }
+        if (parts.length >= 2) {
+            const [resourceType, resourceName, ...rest] = parts;
+            const attribute = rest.length ? rest.join('.') : undefined;
             refs.push({ kind: 'resource', resource_type: resourceType, name: resourceName, attribute });
-        } else if (token.startsWith('path.')) {
-            refs.push({ kind: 'path', name: token.split('.')[1] || token });
         }
     }
 
