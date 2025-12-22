@@ -21,7 +21,7 @@ export class BlockScanner {
             }
 
             const endIndex = findMatchingBrace(content, braceIndex);
-            const raw = content.slice(match.index, endIndex + 1);
+            const raw = normalizeRaw(content.slice(match.index, endIndex + 1));
             const body = content.slice(braceIndex + 1, endIndex);
 
             blocks.push({
@@ -92,4 +92,31 @@ function findMatchingBrace(content: string, startIndex: number): number {
     }
 
     return content.length - 1;
+}
+
+function normalizeRaw(raw: string): string {
+    const trimmed = raw.trim();
+    const lines = trimmed.split(/\r?\n/);
+    if (lines.length === 1) {
+        return lines[0];
+    }
+
+    const indents = lines
+        .slice(1)
+        .filter((line) => line.trim().length > 0)
+        .map((line) => (line.match(/^(\s*)/)?.[1].length ?? 0));
+    const minIndent = indents.length ? Math.min(...indents) : 0;
+
+    const normalizeAlignment = (line: string): string =>
+        line
+            .replace(/\s{2,}=\s*/g, ' = ')
+            .replace(/\s*=\s{2,}/g, ' = ')
+            .trimEnd();
+
+    const normalized = lines.map((line, index) => {
+        const withoutIndent = index === 0 ? line.trimStart() : line.slice(Math.min(minIndent, line.length));
+        return normalizeAlignment(withoutIndent);
+    });
+
+    return normalized.join('\n');
 }

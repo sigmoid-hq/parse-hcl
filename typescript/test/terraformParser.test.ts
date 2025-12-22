@@ -1,7 +1,7 @@
 import path from 'path';
 import { describe, expect, it } from 'vitest';
 import { TerraformParser } from '../src/services/terraformParser';
-import { toJson } from '../src/utils/serializer';
+import { toJson, toYamlDocument } from '../src/utils/serializer';
 
 const fixturesDir = path.join(__dirname, 'fixtures');
 const mainFile = path.join(fixturesDir, 'main.tf');
@@ -49,5 +49,24 @@ describe('TerraformParser', () => {
         expect(json.includes('"variable"')).toBe(false);
         expect(json.includes('"resource"')).toBe(false);
         expect(json.includes('"data"')).toBe(true);
+    });
+
+    it('normalizes raw block formatting', () => {
+        const doc = parser.parseFile(mainFile);
+        const raw = doc.variable[0].raw;
+
+        expect(raw.startsWith('variable "region" {')).toBe(true);
+        expect(raw.includes('\n  type        =')).toBe(false);
+        expect(raw.includes('type = string')).toBe(true);
+    });
+
+    it('emits yaml with 2-space indentation', () => {
+        const doc = parser.parseFile(mainFile);
+        const yaml = toYamlDocument(doc);
+        const lines = yaml.split('\n');
+
+        // check list indentation and nested map indentation
+        expect(lines.some((line) => line.startsWith('  - type: aws_s3_bucket'))).toBe(true);
+        expect(lines.some((line) => line.startsWith('    name: demo'))).toBe(true);
     });
 });
