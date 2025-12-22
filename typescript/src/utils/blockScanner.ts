@@ -1,8 +1,22 @@
 import { BlockKind, HclBlock } from '../types/blocks';
 import { logger } from './logger';
 
-const BLOCK_HEADER =
-    /(terraform|locals|provider|variable|output|module|resource|data)\s*(?:"([^"]+)")?(?:\s*"([^"]+)")?\s*\{/g;
+const KNOWN_BLOCKS = new Set([
+    'terraform',
+    'locals',
+    'provider',
+    'variable',
+    'output',
+    'module',
+    'resource',
+    'data',
+    'moved',
+    'import',
+    'check',
+    'terraform_data'
+]);
+
+const BLOCK_HEADER = /([A-Za-z_][\w-]*)\s*(?:"([^"]+)")?(?:\s*"([^"]+)")?\s*\{/g;
 
 export class BlockScanner {
     scan(content: string, source: string): HclBlock[] {
@@ -11,7 +25,8 @@ export class BlockScanner {
         let match: RegExpExecArray | null;
 
         while ((match = BLOCK_HEADER.exec(content)) !== null) {
-            const kind = match[1] as BlockKind;
+            const keyword = match[1];
+            const kind = (KNOWN_BLOCKS.has(keyword) ? keyword : 'unknown') as BlockKind;
             const labels = [match[2], match[3]].filter(Boolean) as string[];
             const braceIndex = content.indexOf('{', match.index);
 
@@ -26,6 +41,7 @@ export class BlockScanner {
 
             blocks.push({
                 kind,
+                keyword,
                 labels,
                 body: body.trim(),
                 raw,

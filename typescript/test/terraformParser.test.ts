@@ -6,6 +6,7 @@ import { toJson, toYamlDocument } from '../src/utils/serializer';
 const fixturesDir = path.join(__dirname, 'fixtures');
 const mainFile = path.join(fixturesDir, 'main.tf');
 const dataFile = path.join(fixturesDir, 'data.tf');
+const dynamicFile = path.join(fixturesDir, 'dynamic.tf');
 
 describe('TerraformParser', () => {
     const parser = new TerraformParser();
@@ -35,9 +36,9 @@ describe('TerraformParser', () => {
     it('aggregates multiple files when parsing a directory', () => {
         const result = parser.parseDirectory(fixturesDir);
 
-        expect(result.files.length).toBe(2);
+        expect(result.files.length).toBe(3);
         expect(result.combined?.data).toHaveLength(1);
-        expect(result.combined?.resource).toHaveLength(1);
+        expect(result.combined?.resource).toHaveLength(2);
         expect(result.combined?.variable).toHaveLength(1);
     });
 
@@ -68,5 +69,15 @@ describe('TerraformParser', () => {
         // check list indentation and nested map indentation
         expect(lines.some((line) => line.startsWith('  - type: aws_s3_bucket'))).toBe(true);
         expect(lines.some((line) => line.startsWith('    name: demo'))).toBe(true);
+    });
+
+    it('parses dynamic/import/moved/check blocks', () => {
+        const doc = parser.parseFile(dynamicFile);
+
+        expect(doc.resource[0].dynamic_blocks).toHaveLength(1);
+        expect(doc.resource[0].dynamic_blocks[0].label).toBe('ingress');
+        expect(doc.moved).toHaveLength(1);
+        expect(doc.import).toHaveLength(1);
+        expect(doc.check).toHaveLength(1);
     });
 });

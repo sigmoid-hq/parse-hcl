@@ -1,5 +1,6 @@
 import {
     DataBlock,
+    GenericBlock,
     ModuleBlock,
     ProviderBlock,
     ResourceBlock,
@@ -112,6 +113,20 @@ export class DataParser {
         return {
             dataType: dataType || 'unknown',
             name: name || 'unnamed',
+            properties: parsed.attributes,
+            blocks: parsed.blocks,
+            raw: block.raw,
+            source: block.source
+        };
+    }
+}
+
+export class GenericBlockParser {
+    parse(block: HclBlock): GenericBlock {
+        const parsed = parseBlockBody(block.body);
+        return {
+            type: block.keyword,
+            labels: block.labels,
             properties: parsed.attributes,
             blocks: parsed.blocks,
             raw: block.raw,

@@ -6,7 +6,12 @@ export type BlockKind =
     | 'module'
     | 'resource'
     | 'data'
-    | 'locals';
+    | 'locals'
+    | 'moved'
+    | 'import'
+    | 'check'
+    | 'terraform_data'
+    | 'unknown';
 
 export type ExpressionKind = 'traversal' | 'function_call' | 'template' | 'for_expr' | 'unknown';
 
@@ -63,6 +68,7 @@ export interface NestedBlock {
 
 export interface HclBlock {
     kind: BlockKind;
+    keyword: string;
     labels: string[];
     body: string;
     raw: string;
@@ -158,6 +164,11 @@ export interface TerraformDocument {
     resource: ResourceBlock[];
     data: DataBlock[];
     locals: LocalValue[];
+    moved: GenericBlock[];
+    import: GenericBlock[];
+    check: GenericBlock[];
+    terraform_data: GenericBlock[];
+    unknown: GenericBlock[];
 }
 
 export function createEmptyDocument(): TerraformDocument {
@@ -169,7 +180,12 @@ export function createEmptyDocument(): TerraformDocument {
         module: [],
         resource: [],
         data: [],
-        locals: []
+        locals: [],
+        moved: [],
+        import: [],
+        check: [],
+        terraform_data: [],
+        unknown: []
     };
 }
 
@@ -186,4 +202,13 @@ export interface DirectoryParseOptions {
 export interface DirectoryParseResult {
     combined?: TerraformDocument;
     files: FileParseResult[];
+}
+
+export interface GenericBlock {
+    type: string;
+    labels: string[];
+    properties: Record<string, Value>;
+    blocks: NestedBlock[];
+    raw: string;
+    source: string;
 }

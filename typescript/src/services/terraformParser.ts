@@ -9,7 +9,14 @@ import { BlockScanner } from '../utils/blockScanner';
 import { isDirectory, listTerraformFiles, pathExists, readTextFile } from '../utils/fs';
 import { logger } from '../utils/logger';
 import { LocalsParser } from '../parsers/localsParser';
-import { ModuleParser, ProviderParser, ResourceParser, DataParser, TerraformSettingsParser } from '../parsers/genericParser';
+import {
+    ModuleParser,
+    ProviderParser,
+    ResourceParser,
+    DataParser,
+    TerraformSettingsParser,
+    GenericBlockParser
+} from '../parsers/genericParser';
 import { OutputParser } from '../parsers/outputParser';
 import { VariableParser } from '../parsers/variableParser';
 
@@ -23,6 +30,7 @@ export class TerraformParser {
     private readonly resourceParser = new ResourceParser();
     private readonly dataParser = new DataParser();
     private readonly terraformSettingsParser = new TerraformSettingsParser();
+    private readonly genericBlockParser = new GenericBlockParser();
 
     parseFile(filePath: string): TerraformDocument {
         logger.info(`Parsing Terraform file: ${filePath}`);
@@ -56,8 +64,20 @@ export class TerraformParser {
                 case 'terraform':
                     document.terraform.push(this.terraformSettingsParser.parse(block));
                     break;
+                case 'moved':
+                    document.moved.push(this.genericBlockParser.parse(block));
+                    break;
+                case 'import':
+                    document.import.push(this.genericBlockParser.parse(block));
+                    break;
+                case 'check':
+                    document.check.push(this.genericBlockParser.parse(block));
+                    break;
+                case 'terraform_data':
+                    document.terraform_data.push(this.genericBlockParser.parse(block));
+                    break;
                 default:
-                    logger.warn(`Unhandled block kind: ${block.kind}`);
+                    document.unknown.push(this.genericBlockParser.parse(block));
             }
         }
 
@@ -98,6 +118,11 @@ export class TerraformParser {
             combined.resource.push(...doc.resource);
             combined.data.push(...doc.data);
             combined.locals.push(...doc.locals);
+            combined.moved.push(...doc.moved);
+            combined.import.push(...doc.import);
+            combined.check.push(...doc.check);
+            combined.terraform_data.push(...doc.terraform_data);
+            combined.unknown.push(...doc.unknown);
         }
 
         return combined;

@@ -100,6 +100,19 @@ export function buildDependencyGraph(document: TerraformDocument): DependencyGra
         addEdges(node, referencesFromValue(local.value), local.source);
     }
 
+    // other blocks (moved/import/check/terraform_data/unknown) - only references
+    const otherBlocks = [
+        ...document.moved,
+        ...document.import,
+        ...document.check,
+        ...document.terraform_data,
+        ...document.unknown
+    ];
+    for (const block of otherBlocks) {
+        addEdges(undefined, referencesFromAttributes(block.properties), block.source);
+        addEdges(undefined, referencesFromNestedBlocks(block.blocks), block.source);
+    }
+
     return {
         nodes: Array.from(nodes.values()),
         edges,
