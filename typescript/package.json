@@ -10,9 +10,12 @@
     "private": false,
     "scripts": {
         "build": "tsc -p tsconfig.json",
+        "build:examples": "tsc -p tsconfig.examples.json",
         "test": "vitest run",
-        "example": "yarn build && node dist/examples/runExample.js",
-        "cli": "yarn build && node dist/cli.js"
+        "example": "yarn build && yarn build:examples && node dist/examples/runExample.js",
+        "cli": "yarn build && node dist/cli.js",
+        "example:usage": "yarn build && yarn build:examples && node dist/examples/usageBasic.js",
+        "example:artifacts": "yarn build && yarn build:examples && node dist/examples/usageArtifacts.js"
     },
     "devDependencies": {
         "@types/node": "^25.0.1",

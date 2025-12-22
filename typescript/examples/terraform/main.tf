@@ -23,6 +23,15 @@ resource "aws_s3_bucket" "artifact" {
 
   tags = {
     Project = var.project
-    Env     = var.env
+  Env     = var.env
+  }
+}
+
+dynamic "tag" {
+  for_each = var.additional_tags
+
+  content {
+    key   = tag.key
+    value = tag.value
   }
 }
