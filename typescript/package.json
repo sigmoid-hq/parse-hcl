@@ -21,7 +21,8 @@
     "private": false,
     "files": [
         "dist",
-        "README.md"
+        "README.md",
+        "LICENSE"
     ],
     "keywords": [
         "terraform",
@@ -39,10 +40,12 @@
         "build": "tsc -p tsconfig.json",
         "build:examples": "tsc -p tsconfig.examples.json",
         "test": "vitest run",
+        "test:coverage": "vitest run --coverage",
         "lint": "eslint src",
         "lint:fix": "eslint src --fix",
         "format": "prettier --write \"src/**/*.ts\"",
         "format:check": "prettier --check \"src/**/*.ts\"",
+        "prepublishOnly": "yarn build && yarn test && yarn lint",
         "example": "yarn build && yarn build:examples && node dist/examples/runExample.js",
         "cli": "yarn build && node dist/cli.js",
         "example:usage": "yarn build && yarn build:examples && node dist/examples/usageBasic.js",
@@ -52,6 +55,7 @@
         "@types/node": "^25.0.1",
         "@typescript-eslint/eslint-plugin": "^8.50.1",
         "@typescript-eslint/parser": "^8.50.1",
+        "@vitest/coverage-v8": "^4.0.16",
         "eslint": "^9.39.2",
         "eslint-config-prettier": "^10.1.8",
         "globals": "^16.5.0",
