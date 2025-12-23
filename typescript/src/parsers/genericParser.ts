@@ -12,8 +12,8 @@ import {
     TerraformSettingsBlock
 } from '../types/blocks';
 import { HclBlock } from '../types/blocks';
-import { parseBlockBody } from '../utils/bodyParser';
-import { literalString } from '../utils/valueHelpers';
+import { parseBlockBody } from '../utils/parser/bodyParser';
+import { literalString } from '../utils/common/valueHelpers';
 
 /** Meta-argument keys that are separated from resource properties */
 const META_KEYS = new Set(['count', 'for_each', 'provider', 'depends_on', 'lifecycle']);

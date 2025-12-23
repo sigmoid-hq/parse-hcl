@@ -3,8 +3,8 @@
  * Handles block detection, label extraction, and body isolation.
  */
 
-import { BlockKind, HclBlock } from '../types/blocks';
-import { ParseError, offsetToLocation } from './errors';
+import { BlockKind, HclBlock } from '../../types/blocks';
+import { ParseError, offsetToLocation } from '../common/errors';
 import {
     findMatchingBrace,
     isQuote,
@@ -14,7 +14,7 @@ import {
     skipString,
     skipWhitespaceAndComments
 } from './hclLexer';
-import { logger } from './logger';
+import { logger } from '../common/logger';
 
 /**
  * Set of known Terraform block types.

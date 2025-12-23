@@ -2,7 +2,7 @@
 import path from 'path';
 import { TerraformParser } from './services/terraformParser';
 import { TfVarsParser, TfStateParser, TfPlanParser } from './services/artifactParsers';
-import { toExport, toJson, toJsonExport, toYamlDocument } from './utils/serializer';
+import { toExport, toJson, toJsonExport, toYamlDocument } from './utils/serialization/serializer';
 
 interface CliOptions {
     file?: string;

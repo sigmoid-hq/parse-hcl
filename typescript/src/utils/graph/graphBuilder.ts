@@ -9,8 +9,8 @@ import {
     GraphNode,
     GraphNodeKind,
     TerraformExport
-} from '../types/artifacts';
-import { NestedBlock, Reference, TerraformDocument, Value } from '../types/blocks';
+} from '../../types/artifacts';
+import { NestedBlock, Reference, TerraformDocument, Value } from '../../types/blocks';
 
 /** Current graph export version */
 const GRAPH_VERSION = '1.0.0';

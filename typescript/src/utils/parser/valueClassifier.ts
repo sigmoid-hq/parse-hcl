@@ -11,8 +11,8 @@ import {
     ObjectValue,
     Reference,
     Value
-} from '../types/blocks';
-import { isEscaped, splitArrayElements, splitObjectEntries } from './hclLexer';
+} from '../../types/blocks';
+import { isEscaped, splitArrayElements, splitObjectEntries } from '../lexer/hclLexer';
 
 /**
  * Pattern for matching traversal expressions (e.g., aws_instance.web.id).

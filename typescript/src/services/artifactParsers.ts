@@ -10,8 +10,8 @@ import {
     TfVarsDocument
 } from '../types/artifacts';
 import { Value } from '../types/blocks';
-import { parseBlockBody } from '../utils/bodyParser';
-import { readJsonFile, readTextFile } from '../utils/fs';
+import { parseBlockBody } from '../utils/parser/bodyParser';
+import { readJsonFile, readTextFile } from '../utils/common/fs';
 import { convertJsonValue } from './terraformJsonParser';
 
 export class TfVarsParser {

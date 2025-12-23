@@ -4,7 +4,7 @@
  */
 
 import { HclBlock, LocalValue } from '../types/blocks';
-import { parseBlockBody } from '../utils/bodyParser';
+import { parseBlockBody } from '../utils/parser/bodyParser';
 
 /**
  * Parser for Terraform locals definition blocks.

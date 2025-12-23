@@ -5,21 +5,25 @@
 
 import path from 'path';
 import { describe, expect, it } from 'vitest';
-import { TerraformParser } from '../src/services/terraformParser';
-import { classifyValue } from '../src/utils/valueClassifier';
-import { parseTypeConstraint } from '../src/parsers/variableParser';
-import { buildDependencyGraph } from '../src/utils/graphBuilder';
-import { toJson, toYamlDocument } from '../src/utils/serializer';
-import { ParseError, offsetToLocation } from '../src/utils/errors';
-import { BlockScanner } from '../src/utils/blockScanner';
+import {
+    TerraformParser,
+    classifyValue,
+    parseTypeConstraint,
+    buildDependencyGraph,
+    toJson,
+    toYamlDocument,
+    ParseError,
+    offsetToLocation
+} from '../../src';
+import { BlockScanner } from '../../src/utils/lexer/blockScanner';
 import {
     splitArrayElements,
     splitObjectEntries,
     isEscaped,
     findMatchingBrace
-} from '../src/utils/hclLexer';
+} from '../../src/utils/lexer/hclLexer';
 
-const fixturesDir = path.join(__dirname, 'fixtures');
+const fixturesDir = path.join(__dirname, '..', 'fixtures');
 const advancedFile = path.join(fixturesDir, 'advanced.tf');
 
 describe('Value Classifier', () => {

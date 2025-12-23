@@ -1,10 +1,8 @@
 import path from 'path';
 import { describe, expect, it } from 'vitest';
-import { TerraformParser } from '../src/services/terraformParser';
-import { TfVarsParser } from '../src/services/artifactParsers';
-import { toJson, toJsonExport } from '../src/utils/serializer';
+import { TerraformParser, TfVarsParser, toJson, toJsonExport } from '../../src';
 
-const fixturesDir = path.join(__dirname, 'fixtures');
+const fixturesDir = path.join(__dirname, '..', 'fixtures');
 const tfJsonFile = path.join(fixturesDir, 'config.tf.json');
 const tfvarsJsonFile = path.join(fixturesDir, 'vars.auto.tfvars.json');
 const mainTfFile = path.join(fixturesDir, 'main.tf');

@@ -10,9 +10,9 @@ import {
     TerraformDocument,
     createEmptyDocument
 } from '../types/blocks';
-import { BlockScanner } from '../utils/blockScanner';
-import { isDirectory, listTerraformFiles, pathExists, readTextFile } from '../utils/fs';
-import { logger } from '../utils/logger';
+import { BlockScanner } from '../utils/lexer/blockScanner';
+import { isDirectory, listTerraformFiles, pathExists, readTextFile } from '../utils/common/fs';
+import { logger } from '../utils/common/logger';
 import { LocalsParser } from '../parsers/localsParser';
 import {
     ModuleParser,

@@ -1,10 +1,8 @@
 import path from 'path';
 import { describe, expect, it } from 'vitest';
-import { TfPlanParser, TfStateParser, TfVarsParser } from '../src/services/artifactParsers';
-import { TerraformParser } from '../src/services/terraformParser';
-import { buildDependencyGraph } from '../src/utils/graphBuilder';
+import { TfPlanParser, TfStateParser, TfVarsParser, TerraformParser, buildDependencyGraph } from '../../src';
 
-const fixturesDir = path.join(__dirname, 'fixtures');
+const fixturesDir = path.join(__dirname, '..', 'fixtures');
 
 describe('Terraform artifact parsers', () => {
     it('parses tfvars assignments', () => {

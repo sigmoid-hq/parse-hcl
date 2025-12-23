@@ -1,10 +1,9 @@
 import path from 'path';
 import { describe, expect, it } from 'vitest';
-import { TerraformParser } from '../src/services/terraformParser';
-import { listTerraformFiles } from '../src/utils/fs';
-import { toJson, toYamlDocument } from '../src/utils/serializer';
+import { TerraformParser, toJson, toYamlDocument } from '../../src';
+import { listTerraformFiles } from '../../src/utils/common/fs';
 
-const fixturesDir = path.join(__dirname, 'fixtures');
+const fixturesDir = path.join(__dirname, '..', 'fixtures');
 const mainFile = path.join(fixturesDir, 'main.tf');
 const dataFile = path.join(fixturesDir, 'data.tf');
 const dynamicFile = path.join(fixturesDir, 'dynamic.tf');

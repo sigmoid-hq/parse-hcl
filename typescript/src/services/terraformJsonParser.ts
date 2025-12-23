@@ -1,6 +1,6 @@
 import { createEmptyDocument, TerraformDocument, Value } from '../types/blocks';
-import { readJsonFile } from '../utils/fs';
-import { classifyValue } from '../utils/valueClassifier';
+import { readJsonFile } from '../utils/common/fs';
+import { classifyValue } from '../utils/parser/valueClassifier';
 
 type JsonConfig = Record<string, unknown>;
 

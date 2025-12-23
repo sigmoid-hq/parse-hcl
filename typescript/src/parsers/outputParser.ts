@@ -4,8 +4,8 @@
  */
 
 import { HclBlock, OutputBlock } from '../types/blocks';
-import { parseBlockBody } from '../utils/bodyParser';
-import { literalBoolean, literalString } from '../utils/valueHelpers';
+import { parseBlockBody } from '../utils/parser/bodyParser';
+import { literalBoolean, literalString } from '../utils/common/valueHelpers';
 
 /**
  * Parser for Terraform output definition blocks.

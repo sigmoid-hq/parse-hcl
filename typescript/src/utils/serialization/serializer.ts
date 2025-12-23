@@ -1,6 +1,6 @@
-import { TerraformDocument } from '../types/blocks';
-import { TerraformExport } from '../types/artifacts';
-import { createExport } from './graphBuilder';
+import { TerraformDocument } from '../../types/blocks';
+import { TerraformExport } from '../../types/artifacts';
+import { createExport } from '../graph/graphBuilder';
 import { toYaml } from './yaml';
 
 export interface SerializeOptions {

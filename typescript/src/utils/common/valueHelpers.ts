@@ -1,4 +1,4 @@
-import { Value } from '../types/blocks';
+import { Value } from '../../types/blocks';
 
 export function literalString(value?: Value): string | undefined {
     if (value?.type === 'literal' && typeof value.value === 'string') {

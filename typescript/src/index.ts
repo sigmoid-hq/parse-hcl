@@ -50,10 +50,10 @@ export * from './services/artifactParsers';
 export * from './services/terraformJsonParser';
 
 // Utilities
-export * from './utils/serializer';
-export * from './utils/graphBuilder';
-export * from './utils/errors';
+export * from './utils/serialization/serializer';
+export * from './utils/graph/graphBuilder';
+export * from './utils/common/errors';
 
 // Re-export commonly used utilities
-export { classifyValue } from './utils/valueClassifier';
+export { classifyValue } from './utils/parser/valueClassifier';
 export { parseTypeConstraint } from './parsers/variableParser';

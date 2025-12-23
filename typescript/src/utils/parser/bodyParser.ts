@@ -3,7 +3,7 @@
  * Extracts attributes (key = value pairs) and nested blocks from block content.
  */
 
-import { NestedBlock, ParsedBody, Value } from '../types/blocks';
+import { NestedBlock, ParsedBody, Value } from '../../types/blocks';
 import { classifyValue } from './valueClassifier';
 import {
     findMatchingBrace,
@@ -12,7 +12,7 @@ import {
     readQuotedString,
     readValue,
     skipWhitespaceAndComments
-} from './hclLexer';
+} from '../lexer/hclLexer';
 
 /**
  * Parses an HCL block body into structured attributes and nested blocks.
