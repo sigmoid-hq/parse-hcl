@@ -1,3 +1,9 @@
+"""
+Main Terraform parser for HCL configuration files.
+
+Parses .tf and .tf.json files into structured TerraformDocument objects.
+"""
+
 from __future__ import annotations
 
 from typing import List
@@ -20,7 +26,28 @@ from .terraform_json_parser import TerraformJsonParser
 
 
 class TerraformParser:
+    """
+    Parser for Terraform configuration files (.tf, .tf.json).
+
+    Provides methods for parsing single files and directories of Terraform
+    configurations into structured TerraformDocument objects.
+
+    Example:
+        >>> parser = TerraformParser()
+        >>>
+        >>> # Parse a single file
+        >>> doc = parser.parse_file('main.tf')
+        >>>
+        >>> # Parse a directory
+        >>> result = parser.parse_directory('./terraform')
+        >>>
+        >>> # Access parsed resources
+        >>> for resource in doc['resource']:
+        ...     print(f"{resource['type']}.{resource['name']}")
+    """
+
     def __init__(self) -> None:
+        """Initializes the TerraformParser with all required sub-parsers."""
         self.scanner = BlockScanner()
         self.variable_parser = VariableParser()
         self.output_parser = OutputParser()
@@ -34,6 +61,27 @@ class TerraformParser:
         self.json_parser = TerraformJsonParser()
 
     def parse_file(self, file_path: str) -> TerraformDocument:
+        """
+        Parses a single Terraform configuration file.
+
+        Supports both HCL (.tf) and JSON (.tf.json) formats.
+
+        Args:
+            file_path: Path to the Terraform configuration file.
+
+        Returns:
+            A TerraformDocument containing all parsed blocks.
+
+        Raises:
+            FileNotFoundError: If the file does not exist.
+            ParseError: If the file contains invalid HCL syntax.
+
+        Example:
+            >>> parser = TerraformParser()
+            >>> doc = parser.parse_file('main.tf')
+            >>> print(len(doc['resource']))
+            5
+        """
         if file_path.endswith(".tf.json"):
             return self.json_parser.parse_file(file_path)
 
@@ -73,6 +121,33 @@ class TerraformParser:
         return document
 
     def parse_directory(self, dir_path: str, aggregate: bool = True, include_per_file: bool = True) -> DirectoryParseResult:
+        """
+        Parses all Terraform configuration files in a directory.
+
+        Recursively finds and parses all .tf and .tf.json files in the directory,
+        excluding common non-Terraform directories (.terraform, .git, node_modules).
+
+        Args:
+            dir_path: Path to the directory to parse.
+            aggregate: Whether to combine all files into a single document (default: True).
+            include_per_file: Whether to include per-file results (default: True).
+
+        Returns:
+            A DirectoryParseResult containing:
+            - combined: The aggregated TerraformDocument (if aggregate is True)
+            - files: List of per-file parse results (if include_per_file is True)
+
+        Raises:
+            ValueError: If the directory path is invalid.
+
+        Example:
+            >>> parser = TerraformParser()
+            >>> result = parser.parse_directory('./terraform')
+            >>> print(len(result['combined']['resource']))
+            10
+            >>> print(len(result['files']))
+            3
+        """
         if not path_exists(dir_path) or not is_directory(dir_path):
             raise ValueError(f"Invalid directory path: {dir_path}")
 
@@ -86,6 +161,23 @@ class TerraformParser:
         return result
 
     def combine(self, documents: List[TerraformDocument]) -> TerraformDocument:
+        """
+        Combines multiple TerraformDocument objects into a single document.
+
+        Merges all blocks from each document into a single unified document.
+
+        Args:
+            documents: List of TerraformDocument objects to combine.
+
+        Returns:
+            A single TerraformDocument containing all blocks from all documents.
+
+        Example:
+            >>> parser = TerraformParser()
+            >>> doc1 = parser.parse_file('main.tf')
+            >>> doc2 = parser.parse_file('variables.tf')
+            >>> combined = parser.combine([doc1, doc2])
+        """
         combined = create_empty_document()
         for doc in documents:
             combined["terraform"].extend(doc.get("terraform", []))

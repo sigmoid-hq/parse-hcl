@@ -1,17 +1,50 @@
+"""
+Value classifier for HCL expressions.
+
+Classifies raw value strings into typed Value structures and extracts references.
+"""
+
 from __future__ import annotations
 
 import json
 import re
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from ..lexer.hcl_lexer import is_escaped, split_array_elements, split_object_entries
-from ...types import ExpressionKind, Reference, Value
+from ...types import ExpressionKind, ReferenceDict, Value
 
 TRAVERSAL_PATTERN = re.compile(r"[A-Za-z_][\w-]*(?:\[(?:[^[\]]*|\*)])?(?:\.[A-Za-z_][\w-]*(?:\[(?:[^[\]]*|\*)])?)+")
+"""Pattern for matching traversal expressions (e.g., aws_instance.web.id)."""
+
 SPLAT_PATTERN = re.compile(r"\[\*]")
+"""Pattern for matching splat expressions (e.g., aws_instance.web[*].id)."""
 
 
 def classify_value(raw: str) -> Value:
+    """
+    Classifies a raw HCL value string into a typed Value structure.
+
+    Supports literals, quoted strings, arrays, objects, and expressions.
+
+    Args:
+        raw: The raw value string to classify.
+
+    Returns:
+        The classified Value with type information and extracted references.
+
+    Example:
+        >>> classify_value('true')
+        {'type': 'literal', 'value': True, 'raw': 'true'}
+
+        >>> classify_value('"hello"')
+        {'type': 'literal', 'value': 'hello', 'raw': '"hello"'}
+
+        >>> classify_value('var.region')
+        {'type': 'expression', 'kind': 'traversal', 'raw': 'var.region', ...}
+
+        >>> classify_value('[1, 2, 3]')
+        {'type': 'array', 'value': [...], 'raw': '[1, 2, 3]'}
+    """
     trimmed = raw.strip()
 
     literal = _classify_literal(trimmed)
@@ -36,7 +69,16 @@ def classify_value(raw: str) -> Value:
     return _classify_expression(trimmed)
 
 
-def _classify_literal(raw: str) -> Value | None:
+def _classify_literal(raw: str) -> Optional[Value]:
+    """
+    Classifies a raw value as a literal (boolean, number, or null).
+
+    Args:
+        raw: The trimmed raw value.
+
+    Returns:
+        LiteralValue if it's a literal, None otherwise.
+    """
     if raw in ("true", "false"):
         return {"type": "literal", "value": raw == "true", "raw": raw}
 
@@ -50,6 +92,15 @@ def _classify_literal(raw: str) -> Value | None:
 
 
 def _classify_array(raw: str) -> Value:
+    """
+    Classifies and parses an array value with recursive element parsing.
+
+    Args:
+        raw: The raw array string including brackets.
+
+    Returns:
+        ArrayValue with parsed elements and extracted references.
+    """
     elements = split_array_elements(raw)
     parsed_elements = [classify_value(elem) for elem in elements]
     references = _collect_references(parsed_elements)
@@ -63,6 +114,15 @@ def _classify_array(raw: str) -> Value:
 
 
 def _classify_object(raw: str) -> Value:
+    """
+    Classifies and parses an object value with recursive entry parsing.
+
+    Args:
+        raw: The raw object string including braces.
+
+    Returns:
+        ObjectValue with parsed entries and extracted references.
+    """
     entries = split_object_entries(raw)
     parsed_entries: Dict[str, Value] = {key: classify_value(value) for key, value in entries}
     references = _collect_references(list(parsed_entries.values()))
@@ -75,12 +135,21 @@ def _classify_object(raw: str) -> Value:
     }
 
 
-def _collect_references(values: List[Value]) -> List[Reference]:
-    refs: List[Reference] = []
+def _collect_references(values: List[Value]) -> List[ReferenceDict]:
+    """
+    Collects all references from an array of values.
+
+    Args:
+        values: Array of Value objects.
+
+    Returns:
+        Deduplicated array of references.
+    """
+    refs: List[ReferenceDict] = []
 
     for value in values:
         if value.get("references"):
-            refs.extend(value["references"])  # type: ignore[index]
+            refs.extend(value["references"])  # type: ignore[arg-type]
 
         if value["type"] == "array" and isinstance(value.get("value"), list):
             refs.extend(_collect_references(value["value"]))  # type: ignore[arg-type]
@@ -90,13 +159,32 @@ def _collect_references(values: List[Value]) -> List[Reference]:
     return _unique_references(refs)
 
 
-def _classify_expression(raw: str, forced_kind: ExpressionKind | None = None) -> Value:
+def _classify_expression(raw: str, forced_kind: Optional[ExpressionKind] = None) -> Value:
+    """
+    Classifies an expression and extracts its references.
+
+    Args:
+        raw: The raw expression string.
+        forced_kind: Optional forced expression kind.
+
+    Returns:
+        ExpressionValue with kind and references.
+    """
     kind = forced_kind or _detect_expression_kind(raw)
     references = _extract_expression_references(raw, kind)
     return {"type": "expression", "kind": kind, "raw": raw, "references": references or None}
 
 
 def _detect_expression_kind(raw: str) -> ExpressionKind:
+    """
+    Detects the kind of an expression based on its syntax.
+
+    Args:
+        raw: The raw expression string.
+
+    Returns:
+        The detected ExpressionKind.
+    """
     if "${" in raw:
         return "template"
     if _has_conditional_operator(raw):
@@ -113,9 +201,20 @@ def _detect_expression_kind(raw: str) -> ExpressionKind:
 
 
 def _has_conditional_operator(raw: str) -> bool:
+    """
+    Checks if an expression contains a conditional (ternary) operator.
+
+    Handles nested expressions and strings correctly.
+
+    Args:
+        raw: The raw expression string.
+
+    Returns:
+        True if the expression is a conditional.
+    """
     depth = 0
     in_string = False
-    string_char: str | None = None
+    string_char: Optional[str] = None
     question_found = False
     question_depth = -1
 
@@ -144,12 +243,22 @@ def _has_conditional_operator(raw: str) -> bool:
     return False
 
 
-def _extract_expression_references(raw: str, kind: ExpressionKind) -> List[Reference]:
+def _extract_expression_references(raw: str, kind: ExpressionKind) -> List[ReferenceDict]:
+    """
+    Extracts references from an expression.
+
+    Args:
+        raw: The raw expression string.
+        kind: The expression kind.
+
+    Returns:
+        Array of extracted references.
+    """
     base_refs = _extract_references_from_text(raw)
 
     if kind == "template":
         matches = re.findall(r"\${([^}]+)}", raw)
-        inner_refs = []
+        inner_refs: List[ReferenceDict] = []
         for expr in matches:
             inner_refs.extend(_extract_references_from_text(expr))
         return _unique_references(base_refs + inner_refs)
@@ -157,8 +266,20 @@ def _extract_expression_references(raw: str, kind: ExpressionKind) -> List[Refer
     return base_refs
 
 
-def _extract_references_from_text(raw: str) -> List[Reference]:
-    refs: List[Reference] = []
+def _extract_references_from_text(raw: str) -> List[ReferenceDict]:
+    """
+    Extracts all references from a text string.
+
+    Supports: var.*, local.*, module.*, data.*, resource references,
+    path.*, each.*, count.*, self.*
+
+    Args:
+        raw: The raw text to extract references from.
+
+    Returns:
+        Array of extracted references.
+    """
+    refs: List[ReferenceDict] = []
     refs.extend(_extract_special_references(raw))
 
     for match in TRAVERSAL_PATTERN.findall(raw):
@@ -180,7 +301,7 @@ def _extract_references_from_text(raw: str) -> List[Reference]:
 
         if parts[0] == "data" and len(parts) > 2:
             attribute = ".".join(parts[3:]) or None
-            ref: Reference = {
+            ref: ReferenceDict = {
                 "kind": "data",
                 "data_type": parts[1],
                 "name": parts[2],
@@ -200,7 +321,7 @@ def _extract_references_from_text(raw: str) -> List[Reference]:
 
         if len(parts) >= 2:
             attribute = ".".join(parts[2:]) or None
-            ref: Reference = {
+            ref: ReferenceDict = {
                 "kind": "resource",
                 "resource_type": parts[0],
                 "name": parts[1],
@@ -213,20 +334,38 @@ def _extract_references_from_text(raw: str) -> List[Reference]:
     return _unique_references(refs)
 
 
-def _extract_special_references(raw: str) -> List[Reference]:
-    refs: List[Reference] = []
+def _extract_special_references(raw: str) -> List[ReferenceDict]:
+    """
+    Extracts special references: each.key, each.value, count.index, self.*
+
+    Args:
+        raw: The raw text to extract from.
+
+    Returns:
+        Array of special references.
+    """
+    refs: List[ReferenceDict] = []
     for match in re.findall(r"\beach\.(key|value)\b", raw):
-        refs.append({"kind": "each", "property": match})  # type: ignore[arg-type]
+        refs.append({"kind": "each", "property": match})  # type: ignore[typeddict-item]
     if re.search(r"\bcount\.index\b", raw):
-        refs.append({"kind": "count", "property": "index"})  # type: ignore[arg-type]
+        refs.append({"kind": "count", "property": "index"})  # type: ignore[typeddict-item]
     for match in re.findall(r"\bself\.([\w-]+)", raw):
         refs.append({"kind": "self", "attribute": match})
     return refs
 
 
-def _unique_references(refs: List[Reference]) -> List[Reference]:
+def _unique_references(refs: List[ReferenceDict]) -> List[ReferenceDict]:
+    """
+    Removes duplicate references based on their JSON representation.
+
+    Args:
+        refs: Array of references (may contain duplicates).
+
+    Returns:
+        Deduplicated array of references.
+    """
     seen = set()
-    unique: List[Reference] = []
+    unique: List[ReferenceDict] = []
     for ref in refs:
         key = json.dumps(ref, sort_keys=True)
         if key in seen:
@@ -237,10 +376,28 @@ def _unique_references(refs: List[Reference]) -> List[Reference]:
 
 
 def _is_quoted_string(value: str) -> bool:
+    """
+    Checks if a value is a quoted string (single or double quotes).
+
+    Args:
+        value: The value to check.
+
+    Returns:
+        True if the value is a quoted string.
+    """
     return (value.startswith('"') and value.endswith('"')) or (value.startswith("'") and value.endswith("'"))
 
 
 def _unquote(value: str) -> str:
+    """
+    Removes quotes from a quoted string and handles escape sequences.
+
+    Args:
+        value: The quoted string.
+
+    Returns:
+        The unquoted string with escape sequences processed.
+    """
     quote = value[0]
     inner = value[1:-1]
     result = []

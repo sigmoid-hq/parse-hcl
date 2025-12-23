@@ -1,14 +1,61 @@
+"""
+Parser for Terraform variable blocks.
+
+Extracts variable declarations with type constraints, defaults, and validations.
+"""
+
 from __future__ import annotations
 
-from typing import Dict, List, Optional
+import re
+from typing import Any, Dict, List, Optional, Tuple
 
-from ..types import HclBlock, Value
+from ..types import HclBlock, TypeConstraint, Value, VariableValidation
 from ..utils.common.value_helpers import literal_boolean, literal_string
 from ..utils.parser.body_parser import parse_block_body
 
+# Regex patterns for type constraint parsing (matches TypeScript implementation)
+COLLECTION_PATTERN = re.compile(r"^(list|set|map)\s*\(\s*([\s\S]*)\s*\)$")
+OPTIONAL_PATTERN = re.compile(r"^optional\s*\(\s*([\s\S]*)\s*\)$")
+TUPLE_PATTERN = re.compile(r"^tuple\s*\(\s*\[([\s\S]*)\]\s*\)$")
+OBJECT_PATTERN = re.compile(r"^object\s*\(\s*\{([\s\S]*)\}\s*\)$")
+
 
 class VariableParser:
+    """
+    Parser for Terraform variable definition blocks.
+
+    Example HCL:
+        variable "instance_type" {
+          type        = string
+          default     = "t2.micro"
+          description = "EC2 instance type"
+          sensitive   = false
+
+          validation {
+            condition     = can(regex("^t[23]\\\\.", var.instance_type))
+            error_message = "Must be a t2 or t3 instance type."
+          }
+        }
+    """
+
     def parse(self, block: HclBlock) -> Dict[str, object]:
+        """
+        Parses a variable block into a structured VariableBlock.
+
+        Args:
+            block: The raw HCL block to parse.
+
+        Returns:
+            Parsed VariableBlock with all extracted fields including:
+            - name: Variable name
+            - description: Optional description
+            - type: Type constraint expression
+            - typeConstraint: Parsed type constraint
+            - default: Default value
+            - validation: Validation rules
+            - sensitive: Whether the variable is sensitive
+            - nullable: Whether the variable is nullable
+        """
         name = block["labels"][0] if block["labels"] else "unknown"
         parsed = parse_block_body(block["body"])
 
@@ -34,7 +81,16 @@ class VariableParser:
             "source": block["source"],
         }
 
-    def _extract_validation(self, blocks: List[Dict[str, object]]) -> Optional[Dict[str, Value]]:
+    def _extract_validation(self, blocks: List[Dict[str, object]]) -> Optional[VariableValidation]:
+        """
+        Extracts validation rules from nested validation blocks.
+
+        Args:
+            blocks: Nested blocks from the variable body.
+
+        Returns:
+            VariableValidation if a validation block exists, None otherwise.
+        """
         validation_block = next((b for b in blocks if b.get("type") == "validation"), None)
         if not validation_block:
             return None
@@ -49,74 +105,113 @@ class VariableParser:
         return {"condition": condition, "error_message": error_message}
 
 
-def parse_type_constraint(raw: str) -> Dict[str, object]:
+def parse_type_constraint(raw: str) -> TypeConstraint:
+    """
+    Parses a Terraform type constraint expression into a structured TypeConstraint.
+
+    Uses regex patterns for robust parsing that handles whitespace correctly.
+
+    Supports:
+    - Primitive types: string, number, bool, any
+    - Collection types: list(T), set(T), map(T)
+    - Structural types: object({ attr = type, ... }), tuple([type, ...])
+    - Optional attributes: optional(type)
+
+    Args:
+        raw: The raw type expression string.
+
+    Returns:
+        Parsed TypeConstraint with base type and nested structure.
+
+    Example:
+        >>> parse_type_constraint('string')
+        {'base': 'string', 'raw': 'string'}
+
+        >>> parse_type_constraint('list(string)')
+        {'base': 'list', 'element': {'base': 'string', ...}, 'raw': 'list(string)'}
+
+        >>> parse_type_constraint('list ( string )')  # Handles whitespace
+        {'base': 'list', 'element': {'base': 'string', ...}, 'raw': 'list ( string )'}
+
+        >>> parse_type_constraint('tuple([string, number])')
+        {'base': 'tuple', 'elements': [...], 'raw': 'tuple([string, number])'}
+    """
     trimmed = raw.strip()
     primitives = {"string", "number", "bool", "any"}
+
     if trimmed in primitives:
         return {"base": trimmed, "raw": trimmed}
 
-    collection_match = _match_collection(trimmed)
+    # Check for collection types: list(T), set(T), map(T) - using regex for whitespace
+    collection_match = COLLECTION_PATTERN.match(trimmed)
     if collection_match:
-        base, inner = collection_match
-        return {"base": base, "element": parse_type_constraint(inner), "raw": trimmed}
+        base, inner = collection_match.groups()
+        return {
+            "base": base,
+            "element": parse_type_constraint(inner.strip()),
+            "raw": trimmed,
+        }
 
-    optional_match = _match_optional(trimmed)
+    # Check for optional(T) - using regex for whitespace
+    optional_match = OPTIONAL_PATTERN.match(trimmed)
     if optional_match:
-        inner = parse_type_constraint(optional_match)
-        inner_copy = dict(inner)
-        inner_copy["optional"] = True
-        inner_copy["raw"] = trimmed
-        return inner_copy
+        inner = parse_type_constraint(optional_match.group(1).strip())
+        result = dict(inner)
+        result["optional"] = True
+        result["raw"] = trimmed
+        return result  # type: ignore[return-value]
 
-    tuple_match = _match_tuple(trimmed)
+    # Check for tuple([T1, T2, ...]) - preserve element types
+    tuple_match = TUPLE_PATTERN.match(trimmed)
     if tuple_match:
-        return {"base": "tuple", "raw": trimmed}
+        inner_content = tuple_match.group(1).strip()
+        elements = _parse_tuple_elements(inner_content)
+        result: TypeConstraint = {
+            "base": "tuple",
+            "raw": trimmed,
+        }
+        if elements:
+            result["elements"] = elements  # type: ignore[typeddict-unknown-key]
+        return result
 
-    object_match = _match_object(trimmed)
-    if object_match is not None:
-        return {"base": "object", "attributes": object_match, "raw": trimmed}
+    # Check for object({ attr = type, ... }) - using regex for whitespace
+    object_match = OBJECT_PATTERN.match(trimmed)
+    if object_match:
+        inner_content = object_match.group(1)
+        attributes = _parse_object_type_attributes(inner_content)
+        result = {
+            "base": "object",
+            "raw": trimmed,
+        }
+        if attributes:
+            result["attributes"] = attributes
+        return result
 
+    # Default: treat as unknown/complex type expression
     return {"base": trimmed, "raw": trimmed}
 
 
-def _match_collection(raw: str) -> Optional[tuple[str, str]]:
-    if raw.startswith(("list(", "set(", "map(")) and raw.endswith(")"):
-        parts = raw.split("(", 1)
-        base = parts[0].strip()
-        inner = raw[len(base) + 1 : -1]
-        return base, inner
-    return None
+def _parse_tuple_elements(inner: str) -> List[TypeConstraint]:
+    """
+    Parses tuple element types from the inner content of a tuple type.
 
+    Handles nested types correctly by tracking bracket depth.
 
-def _match_optional(raw: str) -> Optional[str]:
-    if raw.startswith("optional(") and raw.endswith(")"):
-        return raw[len("optional(") : -1].strip()
-    return None
+    Args:
+        inner: The content inside tuple([ ... ]).
 
-
-def _match_tuple(raw: str) -> Optional[str]:
-    if raw.startswith("tuple(") and raw.endswith(")"):
-        return raw
-    return None
-
-
-def _match_object(raw: str) -> Optional[Dict[str, object]]:
-    if not raw.startswith("object(") or not raw.endswith(")"):
-        return None
-    inner = raw[len("object(") : -1].strip()
-    if not inner.startswith("{") or not inner.endswith("}"):
-        return None
-    return _parse_object_type_attributes(inner[1:-1])
-
-
-def _parse_object_type_attributes(inner: str) -> Dict[str, object]:
-    attributes: Dict[str, object] = {}
+    Returns:
+        List of TypeConstraint for each element.
+    """
+    elements: List[TypeConstraint] = []
     trimmed = inner.strip()
-    if not trimmed:
-        return attributes
 
+    if not trimmed:
+        return elements
+
+    # Split by commas, respecting nested structures
     depth = 0
-    current = []
+    current: List[str] = []
     entries: List[str] = []
 
     for char in trimmed:
@@ -133,12 +228,67 @@ def _parse_object_type_attributes(inner: str) -> Dict[str, object]:
             current = []
         else:
             current.append(char)
-    if "".join(current).strip():
-        entries.append("".join(current).strip())
 
+    # Don't forget the last entry
+    final = "".join(current).strip()
+    if final:
+        entries.append(final)
+
+    # Parse each element type
     for entry in entries:
-        if "=" in entry:
-            name, type_expr = entry.split("=", 1)
-            attributes[name.strip()] = parse_type_constraint(type_expr.strip())
+        elements.append(parse_type_constraint(entry))
+
+    return elements
+
+
+def _parse_object_type_attributes(inner: str) -> Dict[str, TypeConstraint]:
+    """
+    Parses object type attributes from the inner content of an object type.
+
+    Handles nested types and complex expressions correctly.
+
+    Args:
+        inner: The content inside object({ ... }).
+
+    Returns:
+        Record of attribute names to their TypeConstraints.
+    """
+    attributes: Dict[str, TypeConstraint] = {}
+    trimmed = inner.strip()
+
+    if not trimmed:
+        return attributes
+
+    # Split by commas, respecting nested structures
+    depth = 0
+    current: List[str] = []
+    entries: List[str] = []
+
+    for char in trimmed:
+        if char in "({[":
+            depth += 1
+            current.append(char)
+        elif char in ")}]":
+            depth -= 1
+            current.append(char)
+        elif char == "," and depth == 0:
+            entry = "".join(current).strip()
+            if entry:
+                entries.append(entry)
+            current = []
+        else:
+            current.append(char)
+
+    # Don't forget the last entry
+    final = "".join(current).strip()
+    if final:
+        entries.append(final)
+
+    # Parse each entry (format: "name = type")
+    for entry in entries:
+        match = re.match(r"^(\w+)\s*=\s*([\s\S]+)$", entry)
+        if match:
+            attr_name, attr_type = match.groups()
+            attributes[attr_name] = parse_type_constraint(attr_type.strip())
 
     return attributes
