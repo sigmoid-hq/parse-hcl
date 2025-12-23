@@ -1,11 +1,10 @@
 import sys
 from pathlib import Path
 import unittest
-
-ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT / "python" / "src"))
-
 import json
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
 
 from parse_hcl import (  # noqa: E402
     ParseError,
@@ -17,13 +16,13 @@ from parse_hcl import (  # noqa: E402
     to_json,
     to_yaml_document,
 )
-from parse_hcl.block_scanner import BlockScanner  # noqa: E402
-from parse_hcl.lexer import find_matching_brace, is_escaped, split_array_elements, split_object_entries  # noqa: E402
+from parse_hcl.utils.lexer.block_scanner import BlockScanner  # noqa: E402
+from parse_hcl.utils.lexer.hcl_lexer import find_matching_brace, is_escaped, split_array_elements, split_object_entries  # noqa: E402
 
 
 class ComprehensiveTest(unittest.TestCase):
     def setUp(self) -> None:
-        self.fixtures = ROOT / "typescript" / "test" / "fixtures"
+        self.fixtures = ROOT / "tests" / "fixtures"
         self.parser = TerraformParser()
 
     def test_type_constraint_and_validation(self) -> None:

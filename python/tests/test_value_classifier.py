@@ -2,10 +2,10 @@ import sys
 from pathlib import Path
 import unittest
 
-ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT / "python" / "src"))
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
 
-from parse_hcl.value_classifier import classify_value  # noqa: E402
+from parse_hcl import classify_value  # noqa: E402
 
 
 class ValueClassifierTest(unittest.TestCase):

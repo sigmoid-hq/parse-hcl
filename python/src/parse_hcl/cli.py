@@ -4,9 +4,9 @@ import sys
 from pathlib import Path
 from typing import Any, Dict
 
-from .artifact_parsers import TfPlanParser, TfStateParser, TfVarsParser
-from .serializer import to_export, to_json, to_json_export, to_yaml_document
-from .terraform_parser import TerraformParser
+from .services.artifact_parsers import TfPlanParser, TfStateParser, TfVarsParser
+from .services.terraform_parser import TerraformParser
+from .utils.serialization.serializer import to_export, to_json, to_json_export, to_yaml_document
 
 
 def _usage() -> str:

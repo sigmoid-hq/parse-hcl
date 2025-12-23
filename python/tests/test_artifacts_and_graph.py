@@ -2,15 +2,15 @@ import sys
 from pathlib import Path
 import unittest
 
-ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT / "python" / "src"))
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
 
 from parse_hcl import TerraformParser, TfPlanParser, TfStateParser, TfVarsParser, build_dependency_graph  # noqa: E402
 
 
 class ArtifactParsersTest(unittest.TestCase):
     def setUp(self) -> None:
-        self.fixtures = ROOT / "typescript" / "test" / "fixtures"
+        self.fixtures = ROOT / "tests" / "fixtures"
 
     def test_parses_tfvars_assignments(self) -> None:
         parsed = TfVarsParser().parse_file(str(self.fixtures / "sample.tfvars"))
@@ -35,7 +35,7 @@ class ArtifactParsersTest(unittest.TestCase):
 
 class DependencyGraphTest(unittest.TestCase):
     def setUp(self) -> None:
-        self.fixtures = ROOT / "typescript" / "test" / "fixtures"
+        self.fixtures = ROOT / "tests" / "fixtures"
         self.parser = TerraformParser()
 
     def test_builds_nodes_and_edges(self) -> None:

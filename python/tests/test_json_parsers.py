@@ -2,15 +2,15 @@ import sys
 from pathlib import Path
 import unittest
 
-ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT / "python" / "src"))
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
 
 from parse_hcl import TerraformParser, TfVarsParser, to_json, to_json_export  # noqa: E402
 
 
 class JsonParserTest(unittest.TestCase):
     def setUp(self) -> None:
-        self.fixtures = ROOT / "typescript" / "test" / "fixtures"
+        self.fixtures = ROOT / "tests" / "fixtures"
         self.parser = TerraformParser()
 
     def test_parses_tf_json_configs(self) -> None:

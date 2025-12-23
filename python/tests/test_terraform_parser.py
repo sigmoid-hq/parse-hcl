@@ -2,16 +2,16 @@ import sys
 from pathlib import Path
 import unittest
 
-ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT / "python" / "src"))
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
 
 from parse_hcl import TerraformParser, to_json, to_yaml_document  # noqa: E402
-from parse_hcl.fs_utils import list_terraform_files  # noqa: E402
+from parse_hcl.utils.common.fs import list_terraform_files  # noqa: E402
 
 
 class TerraformParserTest(unittest.TestCase):
     def setUp(self) -> None:
-        self.fixtures = ROOT / "typescript" / "test" / "fixtures"
+        self.fixtures = ROOT / "tests" / "fixtures"
         self.parser = TerraformParser()
 
     def test_parses_core_blocks_from_file(self) -> None:
