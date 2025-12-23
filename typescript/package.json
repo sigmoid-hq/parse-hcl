@@ -1,17 +1,48 @@
 {
     "name": "parse-hcl",
-    "version": "0.0.1",
+    "version": "0.1.0",
     "description": "Lightweight HCL parser focused on identifying and classifying blocks. Supports common Terraform blocks (resource, variable, output, locals, etc.) for tooling and automation.",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
+    "exports": {
+        ".": {
+            "require": "./dist/index.js",
+            "import": "./dist/index.js",
+            "types": "./dist/index.d.ts"
+        },
+        "./package.json": "./package.json"
+    },
+    "bin": {
+        "parse-hcl": "./dist/cli.js"
+    },
     "repository": "https://github.com/sigmoid-hq/parse-hcl",
     "author": "Juan Lee <juan.lee@sigmoid.us>",
     "license": "Apache-2.0",
     "private": false,
+    "files": [
+        "dist",
+        "README.md"
+    ],
+    "keywords": [
+        "terraform",
+        "hcl",
+        "parser",
+        "tfvars",
+        "tfstate",
+        "plan"
+    ],
+    "sideEffects": false,
+    "engines": {
+        "node": ">=18"
+    },
     "scripts": {
         "build": "tsc -p tsconfig.json",
         "build:examples": "tsc -p tsconfig.examples.json",
         "test": "vitest run",
+        "lint": "eslint src",
+        "lint:fix": "eslint src --fix",
+        "format": "prettier --write \"src/**/*.ts\"",
+        "format:check": "prettier --check \"src/**/*.ts\"",
         "example": "yarn build && yarn build:examples && node dist/examples/runExample.js",
         "cli": "yarn build && node dist/cli.js",
         "example:usage": "yarn build && yarn build:examples && node dist/examples/usageBasic.js",
@@ -19,6 +50,12 @@
     },
     "devDependencies": {
         "@types/node": "^25.0.1",
+        "@typescript-eslint/eslint-plugin": "^8.50.1",
+        "@typescript-eslint/parser": "^8.50.1",
+        "eslint": "^9.39.2",
+        "eslint-config-prettier": "^10.1.8",
+        "globals": "^16.5.0",
+        "prettier": "^3.7.4",
         "typescript": "^5.9.3",
         "vitest": "^4.0.15"
     }

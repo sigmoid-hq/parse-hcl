@@ -51,7 +51,7 @@ export function isEscaped(text: string, index: number): boolean {
 
 /**
  * Skips whitespace and comments (line and block comments).
- * Handles //, /* *​/, and # style comments.
+ * Handles "//", block comments, and "#" style comments.
  * @param text - The source text
  * @param start - The starting index
  * @returns The index of the next non-whitespace, non-comment character

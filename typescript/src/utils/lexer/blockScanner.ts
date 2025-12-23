@@ -10,7 +10,6 @@ import {
     isQuote,
     readIdentifier,
     readQuotedString,
-    skipHeredoc,
     skipString,
     skipWhitespaceAndComments
 } from './hclLexer';

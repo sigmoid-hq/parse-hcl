@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import path from 'path';
+import { TerraformDocument } from './types/blocks';
 import { TerraformParser } from './services/terraformParser';
 import { TfVarsParser, TfStateParser, TfPlanParser } from './services/artifactParsers';
 import { toExport, toJson, toJsonExport, toYamlDocument } from './utils/serialization/serializer';
@@ -39,7 +40,6 @@ function main(): void {
     const parser = new TerraformParser();
 
     if (!opts.file && !opts.dir) {
-        // eslint-disable-next-line no-console
         console.error('Usage: parse-hcl --file <path> | --dir <path> [--format json|yaml] [--graph] [--no-prune]');
         process.exit(1);
     }
@@ -78,28 +78,24 @@ function tfvarsParse(filePath: string) {
 }
 
 function emit(data: unknown, opts: CliOptions): void {
-    if (opts.graph && !isTerraformDocLike(data)) {
-        // eslint-disable-next-line no-console
+    if (opts.graph && !isTerraformDoc(data)) {
         console.warn('Graph export requested but input is not a Terraform document; emitting raw output.');
     }
 
     if (opts.format === 'yaml') {
-        // eslint-disable-next-line no-console
-        console.log(toYamlDocument(data as any, { pruneEmpty: opts.prune }));
+        console.info(toYamlDocument(data, { pruneEmpty: opts.prune }));
         return;
     }
 
-    if (opts.graph && isTerraformDocLike(data)) {
-        // eslint-disable-next-line no-console
-        console.log(toJsonExport(data as any, { pruneEmpty: opts.prune }));
+    if (opts.graph && isTerraformDoc(data)) {
+        console.info(toJsonExport(data, { pruneEmpty: opts.prune }));
         return;
     }
 
-    // eslint-disable-next-line no-console
-    console.log(toJson(data as any, { pruneEmpty: opts.prune }));
+    console.info(toJson(data, { pruneEmpty: opts.prune }));
 }
 
-function isTerraformDocLike(data: unknown): boolean {
+function isTerraformDoc(data: unknown): data is TerraformDocument {
     return Boolean(data && typeof data === 'object' && 'resource' in (data as Record<string, unknown>));
 }
 

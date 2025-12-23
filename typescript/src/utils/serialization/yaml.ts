@@ -90,5 +90,5 @@ function isScalar(value: unknown): boolean {
 }
 
 function needsQuoting(value: string): boolean {
-    return /[:{}\[\],&*#?|<>=%@`]/.test(value) || value.includes('"') || value.includes("'") || value.includes('\n');
+    return /[:{}[\],&*#?|<>=%@`]/.test(value) || value.includes('"') || value.includes("'") || value.includes('\n');
 }

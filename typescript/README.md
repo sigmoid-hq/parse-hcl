@@ -1,86 +1,87 @@
 # parse-hcl
 
-Lightweight Terraform parser for TypeScript. It extracts top-level Terraform blocks (resource, variable, output, module, provider, data, terraform, locals, etc.) from single files or directories and serializes them to JSON/YAML.
+[![npm version](https://img.shields.io/npm/v/parse-hcl.svg?label=npm&color=blue)](https://www.npmjs.com/package/parse-hcl)
+[![license](https://img.shields.io/npm/l/parse-hcl.svg?color=blue)](LICENSE)
+[![build](https://img.shields.io/badge/tests-vitest-brightgreen)](#development)
 
-## Highlights
-- Scans top-level blocks and dispatches to block-specific parsers
-- Supports resource/data/module/provider/terraform/locals/variable/output blocks
-- Detects moved/import/check/terraform_data/unknown blocks
-- Parses tfvars/tfstate/tfplan (JSON), tfvars.json, and tf.json configs
-- Serialization prunes empty collections/objects by default (`pruneEmpty: false` keeps everything)
-- Exports dependency graphs
-- Directory parsing can return per-file results and aggregated output
+Lightweight Terraform parser for TypeScript. It extracts top-level Terraform blocks (resource, variable, output, module, provider, data, terraform, locals, etc.), tfvars/tfstate/plan JSON artifacts, and serializes results to JSON/YAML.
 
-## How to use
-1) Install and build
+## Install
 ```bash
-cd typescript
-yarn install
-yarn build
+yarn add parse-hcl
 ```
 
-2) In code
+## Usage
 ```ts
 import {
-  TerraformParser,
-  toJson,
-  toYamlDocument,
-  toJsonExport,
-  buildDependencyGraph,
-  TfVarsParser,
-  TfStateParser,
-  TfPlanParser
-} from './dist';
+    TerraformParser,
+    toJson,
+    toJsonExport,
+    toYamlDocument,
+    buildDependencyGraph,
+    TfVarsParser,
+    TfStateParser,
+    TfPlanParser
+} from 'parse-hcl';
 
 const parser = new TerraformParser();
-const single = parser.parseFile('examples/main.tf');
-console.log(toJson(single)); // pruneEmpty default applied
-console.log(toYamlDocument(single));
-console.log(toJsonExport(single)); // { version, document, graph }
-console.log(buildDependencyGraph(single));
 
-const dirResult = parser.parseDirectory('examples', { aggregate: true, includePerFile: true });
-console.log(dirResult.combined);      // aggregated result
-console.log(dirResult.files[0].path); // per-file result
+// Single file
+const doc = parser.parseFile('examples/terraform/main.tf');
+console.log(toJson(doc));           // prunes empty structures by default
+console.log(toYamlDocument(doc));   // YAML output
+console.log(toJsonExport(doc));     // { version, document, graph }
+console.log(buildDependencyGraph(doc));
+
+// Directory (aggregated + per-file)
+const dir = parser.parseDirectory('examples/terraform', { aggregate: true, includePerFile: true });
+console.log(dir.combined);
+console.log(dir.files[0].path);
 
 // Other Terraform artifacts
-const tfvars = new TfVarsParser().parseFile('examples/variables.auto.tfvars');
+const tfvars = new TfVarsParser().parseFile('examples/terraform/variables.auto.tfvars');
 const state = new TfStateParser().parseFile('terraform.tfstate');
 const plan = new TfPlanParser().parseFile('plan.json'); // terraform show -json output
 
-// tf.json parsing
-const jsonDoc = parser.parseFile('examples/config.tf.json');
+// tf.json
+const jsonDoc = parser.parseFile('examples/terraform/config.tf.json');
 console.log(toJson(jsonDoc, { pruneEmpty: false })); // keep empty collections
 ```
 
-3) Run examples
+## CLI
+설치 후 전역 실행(또는 npx):
 ```bash
-cd typescript
-yarn example
-# Generates sample outputs like ./output/combined.json and ./output/combined.yaml
-yarn example:usage      # console examples for tf/tf.json
-yarn example:artifacts  # console examples for tfvars/tfstate/plan
+parse-hcl --file examples/terraform/main.tf --format json
+parse-hcl --dir examples/terraform --graph --format yaml
+parse-hcl --file examples/terraform/vars.auto.tfvars.json --format json --no-prune
 ```
 
-4) Quick CLI
+레포 내에서 직접 실행:
 ```bash
-cd typescript
-yarn cli --file examples/main.tf --format json
-yarn cli --dir examples/terraform --graph --format yaml
-yarn cli --file examples/vars.auto.tfvars.json --format json --no-prune
+yarn build
+node dist/cli.js --file examples/terraform/main.tf --format json
+node dist/cli.js --dir examples/terraform --graph --format yaml
+node dist/cli.js --file examples/terraform/vars.auto.tfvars.json --format json --no-prune
 ```
 
-## Parsing notes
-- Block scanning balances braces while respecting strings and comments.
-- Inside a block, top-level `key = value` assignments become `attributes`; nested blocks remain as `blocks`.
-- Values are classified as string/number/boolean/array/object/expression; complex expressions keep the original `raw`.
-
-## Tests
+## Examples
 ```bash
-cd typescript
+yarn example            # generates ./output/combined.(json|yaml)
+yarn example:usage      # basic tf / tf.json console output
+yarn example:artifacts  # tfvars / tfstate / plan console output
+```
+
+## Development
+```bash
+yarn install
+yarn build
 yarn test
 ```
 
-## Directory parsing options
-- `aggregate` (default: `true`): Combine all files into a single `TerraformDocument`.
-- `includePerFile` (default: `true`): Include per-file parse results.
+## Notes
+- Block scanning balances braces while respecting strings, heredocs, and comments.
+- Inside a block, top-level `key = value` becomes `attributes`; nested blocks are preserved in `blocks`.
+- Values are classified as literal/array/object/expression; complex expressions retain the original `raw`.
+- Directory parsing options:
+  - `aggregate` (default: `true`): combine into one `TerraformDocument`
+  - `includePerFile` (default: `true`): include per-file results

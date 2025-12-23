@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { classifyValue } from '../../src';
+import { classifyValue } from '../../src/utils/parser/valueClassifier';
 
 describe('valueClassifier references', () => {
     it('extracts references inside arrays such as depends_on', () => {
