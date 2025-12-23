@@ -3,6 +3,7 @@ PROJECT_DESCRIPTION.md
 references/
 output/
 .claude
+INTERNAL*.md
 
 # Logs
 logs
