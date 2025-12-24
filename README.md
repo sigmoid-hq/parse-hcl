@@ -1,132 +1,273 @@
 # parse-hcl
 
 [![npm version](https://img.shields.io/npm/v/parse-hcl.svg?label=npm&color=blue)](https://www.npmjs.com/package/parse-hcl)
+[![PyPI version](https://img.shields.io/pypi/v/parse-hcl.svg?label=pypi&color=blue)](https://pypi.org/project/parse-hcl/)
 [![license](https://img.shields.io/npm/l/parse-hcl.svg?color=blue)](LICENSE)
-[![build](https://img.shields.io/badge/tests-vitest-brightgreen)](#development)
-[![python](https://img.shields.io/badge/python-3.9%2B-blue)](python/README.md)
 
-Lightweight Terraform parser for TypeScript **and Python**. It extracts top-level Terraform blocks (resource, variable, output, module, provider, data, terraform, locals, etc.), tfvars/tfstate/plan JSON artifacts, and serializes results to JSON/YAML.
+A lightweight, zero-dependency Terraform/HCL parser CLI and library for TypeScript and Python.
 
-## Install
-TypeScript/Node:
+Extracts and analyzes Terraform configuration blocks, builds dependency graphs, and outputs structured JSON/YAML — perfect for building IaC tooling, linters, documentation generators, and CI/CD integrations.
+
+## Features
+
+- **Zero dependencies** — No external runtime dependencies in both TypeScript and Python
+- **CLI-first design** — Powerful command-line interface for instant Terraform analysis
+- **Dual language support** — Feature-parity between TypeScript/Node.js and Python implementations
+- **Multiple file formats** — Parses `.tf`, `.tf.json`, `.tfvars`, `.tfstate`, and `plan.json`
+- **Dependency graph** — Automatically builds resource dependency graphs with reference tracking
+- **Flexible output** — JSON and YAML serialization with optional pruning
+- **Expression analysis** — Detects variables, locals, resources, data sources, and module references
+
+## Quick Start
+
+### Installation
+
+**Node.js / TypeScript:**
 ```bash
-yarn add parse-hcl
+# npm
+npm install -g parse-hcl
+
+# yarn
+yarn global add parse-hcl
+
+# pnpm
+pnpm add -g parse-hcl
 ```
 
-Python:
+**Python:**
 ```bash
-pip install parse-hcl           # when published
-pip install ./python            # from this repo
+# pip
+pip install parse-hcl
+
+# pipx (recommended for CLI)
+pipx install parse-hcl
+
+# uv
+uv tool install parse-hcl
 ```
 
-## Usage
-TypeScript:
-```ts
-import {
-    TerraformParser,
-    toJson,
-    toJsonExport,
-    toYamlDocument,
-    buildDependencyGraph,
-    TfVarsParser,
-    TfStateParser,
-    TfPlanParser
-} from 'parse-hcl';
+### Basic CLI Usage
 
-const parser = new TerraformParser();
-
-// Single file
-const doc = parser.parseFile('examples/terraform/main.tf');
-console.log(toJson(doc));           // prunes empty structures by default
-console.log(toYamlDocument(doc));   // YAML output
-console.log(toJsonExport(doc));     // { version, document, graph }
-console.log(buildDependencyGraph(doc));
-
-// Directory (aggregated + per-file)
-const dir = parser.parseDirectory('examples/terraform', { aggregate: true, includePerFile: true });
-console.log(dir.combined);
-console.log(dir.files[0].path);
-
-// Other Terraform artifacts
-const tfvars = new TfVarsParser().parseFile('examples/terraform/variables.auto.tfvars');
-const state = new TfStateParser().parseFile('terraform.tfstate');
-const plan = new TfPlanParser().parseFile('plan.json'); // terraform show -json output
-
-// tf.json
-const jsonDoc = parser.parseFile('examples/terraform/config.tf.json');
-console.log(toJson(jsonDoc, { pruneEmpty: false })); // keep empty collections
-```
-
-Python:
-```python
-from parse_hcl import (
-    TerraformParser,
-    TfVarsParser,
-    TfStateParser,
-    TfPlanParser,
-    to_json,
-    to_json_export,
-    to_yaml_document,
-    build_dependency_graph,
-)
-
-parser = TerraformParser()
-
-doc = parser.parse_file("examples/terraform/main.tf")
-print(to_json(doc))           # prunes empty structures by default
-print(to_yaml_document(doc))  # YAML output
-print(to_json_export(doc))    # { version, document, graph }
-print(build_dependency_graph(doc))
-
-tfvars = TfVarsParser().parse_file("examples/terraform/variables.auto.tfvars")
-state = TfStateParser().parse_file("terraform.tfstate")
-plan = TfPlanParser().parse_file("plan.json")  # terraform show -json output
-```
-
-## CLI
-설치 후 전역 실행(또는 npx/pipx). npm 또는 pip 어느 쪽으로 설치해도 `parse-hcl` 명령을 제공합니다.
 ```bash
-parse-hcl --file examples/terraform/main.tf --format json
-parse-hcl --dir examples/terraform --graph --format yaml
-parse-hcl --file examples/terraform/vars.auto.tfvars.json --format json --no-prune
+# Parse a single Terraform file
+parse-hcl --file main.tf
+
+# Parse with YAML output
+parse-hcl --file main.tf --format yaml
+
+# Parse entire directory
+parse-hcl --dir ./terraform
+
+# Generate dependency graph
+parse-hcl --file main.tf --graph
+
+# Parse tfvars file
+parse-hcl --file terraform.tfvars
+
+# Parse Terraform state
+parse-hcl --file terraform.tfstate
+
+# Parse Terraform plan
+parse-hcl --file plan.json
 ```
 
-레포 내에서 직접 실행:
+## CLI Reference
+
+```
+parse-hcl --file <path> | --dir <path> [options]
+```
+
+### Options
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--file <path>` | Parse a single file (`.tf`, `.tf.json`, `.tfvars`, `.tfstate`, `plan.json`) | - |
+| `--dir <path>` | Parse all Terraform files in directory (recursive) | - |
+| `--format <type>` | Output format: `json` or `yaml` | `json` |
+| `--graph` | Include dependency graph in output | `false` |
+| `--no-prune` | Keep empty arrays/objects in output | `false` |
+
+### Examples
+
+**Parse a Terraform file to JSON:**
 ```bash
-# Node/TypeScript build
-yarn build
-node dist/cli.js --file examples/terraform/main.tf --format json
-node dist/cli.js --dir examples/terraform --graph --format yaml
-node dist/cli.js --file examples/terraform/vars.auto.tfvars.json --format json --no-prune
-
-# Python CLI
-python -m parse_hcl.cli --file examples/terraform/main.tf --format json
-python -m parse_hcl.cli --dir examples/terraform --graph --format yaml
+$ parse-hcl --file main.tf --format json
 ```
 
-## Examples
+**Output:**
+```json
+{
+  "resource": [
+    {
+      "type": "aws_s3_bucket",
+      "name": "demo",
+      "properties": {
+        "bucket": {
+          "type": "expression",
+          "kind": "template",
+          "raw": "${local.name_prefix}-bucket",
+          "references": [
+            { "kind": "local", "name": "name_prefix" }
+          ]
+        }
+      },
+      "meta": {
+        "count": { "type": "literal", "value": 2, "raw": "2" }
+      }
+    }
+  ],
+  "variable": [...],
+  "output": [...],
+  "locals": [...]
+}
+```
+
+**Generate dependency graph:**
 ```bash
-yarn example            # generates ./output/combined.(json|yaml)
-yarn example:usage      # basic tf / tf.json console output
-yarn example:artifacts  # tfvars / tfstate / plan console output
+$ parse-hcl --file main.tf --graph --format json
 ```
+
+**Output:**
+```json
+{
+  "version": "1.0.0",
+  "document": { ... },
+  "graph": {
+    "nodes": [
+      { "id": "resource.aws_s3_bucket.demo", "kind": "resource", "type": "aws_s3_bucket", "name": "demo" },
+      { "id": "locals.name_prefix", "kind": "locals", "name": "name_prefix" },
+      { "id": "output.bucket_name", "kind": "output", "name": "bucket_name" }
+    ],
+    "edges": [
+      { "from": "resource.aws_s3_bucket.demo", "to": "locals.name_prefix" },
+      { "from": "output.bucket_name", "to": "resource.aws_s3_bucket.demo" }
+    ]
+  }
+}
+```
+
+**Parse tfvars file:**
+```bash
+$ parse-hcl --file terraform.tfvars
+```
+
+**Output:**
+```json
+{
+  "source": "terraform.tfvars",
+  "assignments": {
+    "project": { "type": "literal", "value": "demo" },
+    "env": { "type": "literal", "value": "dev" },
+    "cidrs": {
+      "type": "array",
+      "value": [
+        { "type": "literal", "value": "10.0.0.0/16" },
+        { "type": "literal", "value": "10.1.0.0/16" }
+      ]
+    }
+  }
+}
+```
+
+**Parse entire directory:**
+```bash
+$ parse-hcl --dir ./infrastructure --format yaml
+```
+
+## Supported Terraform Blocks
+
+| Block Type | Description |
+|------------|-------------|
+| `resource` | Infrastructure resources with type, name, and properties |
+| `data` | Data sources for querying external information |
+| `variable` | Input variables with type constraints and defaults |
+| `output` | Output values with sensitivity and descriptions |
+| `locals` | Local values for intermediate computations |
+| `module` | Module calls with source and version |
+| `provider` | Provider configurations with aliases |
+| `terraform` | Terraform settings (required_version, backend, etc.) |
+| `moved` | Resource move/rename blocks |
+| `import` | Import existing resources |
+| `check` | Validation check blocks |
+
+## Reference Detection
+
+The parser automatically detects and classifies references in expressions:
+
+| Reference Kind | Example | Detected As |
+|----------------|---------|-------------|
+| Variable | `var.region` | `{ kind: "variable", name: "region" }` |
+| Local | `local.prefix` | `{ kind: "local", name: "prefix" }` |
+| Resource | `aws_s3_bucket.demo.id` | `{ kind: "resource", resource_type: "aws_s3_bucket", name: "demo", attribute: "id" }` |
+| Data | `data.aws_ami.latest.id` | `{ kind: "data", data_type: "aws_ami", name: "latest", attribute: "id" }` |
+| Module | `module.vpc.subnet_ids` | `{ kind: "module_output", module: "vpc", output: "subnet_ids" }` |
+| Path | `path.module` | `{ kind: "path", path_type: "module" }` |
+| Each | `each.key` | `{ kind: "each", property: "key" }` |
+| Count | `count.index` | `{ kind: "count" }` |
+| Self | `self.id` | `{ kind: "self", attribute: "id" }` |
+
+## Language-Specific Documentation
+
+For detailed programmatic API usage and language-specific features:
+
+- **[TypeScript/Node.js Documentation](typescript/README.md)** — Full TypeScript API, types, and examples
+- **[Python Documentation](python/README.md)** — Full Python API, type hints, and examples
+
+## Architecture
+
+```
+parse-hcl/
+├── typescript/          # TypeScript/Node.js implementation
+│   ├── src/
+│   │   ├── cli.ts       # CLI entry point
+│   │   ├── services/    # Core parsers
+│   │   ├── utils/       # Lexer, serialization, graph
+│   │   └── types/       # Type definitions
+│   └── test/
+├── python/              # Python implementation
+│   ├── src/parse_hcl/
+│   │   ├── cli.py       # CLI entry point
+│   │   ├── services/    # Core parsers
+│   │   ├── utils/       # Lexer, serialization, graph
+│   │   └── types/       # Type definitions
+│   └── tests/
+└── docs/                # Internal documentation
+```
+
+## Use Cases
+
+- **IaC Linters** — Build custom Terraform linting rules
+- **Documentation Generators** — Auto-generate docs from Terraform configs
+- **CI/CD Integration** — Validate and analyze Terraform in pipelines
+- **IDE Extensions** — Power code intelligence features
+- **Drift Detection** — Compare configurations with state files
+- **Cost Estimation** — Extract resource configurations for pricing
+- **Security Scanning** — Analyze resource configurations for vulnerabilities
+- **Dependency Visualization** — Generate architecture diagrams
 
 ## Development
+
 ```bash
-# TypeScript
+# Clone repository
+git clone https://github.com/sigmoid-hq/parse-hcl.git
+cd parse-hcl
+
+# TypeScript development
+cd typescript
 yarn install
 yarn build
 yarn test
 
-# Python
-pip install ./python
-python -m unittest discover python/tests
+# Python development
+cd python
+pip install -e .
+python -m pytest tests/
 ```
 
-## Notes
-- Block scanning balances braces while respecting strings, heredocs, and comments.
-- Inside a block, top-level `key = value` becomes `attributes`; nested blocks are preserved in `blocks`.
-- Values are classified as literal/array/object/expression; complex expressions retain the original `raw`.
-- Directory parsing options:
-  - `aggregate` (default: `true`): combine into one `TerraformDocument`
-  - `includePerFile` (default: `true`): include per-file results
+## License
+
+[Apache-2.0](LICENSE) — Copyright 2025 Juan Lee
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit issues and pull requests.
