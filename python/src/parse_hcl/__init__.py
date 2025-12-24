@@ -87,7 +87,13 @@ from .types import (
     # Functions
     create_empty_document,
 )
-from .utils.common.errors import ParseError, offset_to_location
+from .utils.common.errors import (
+    ParseError,
+    SourceLocation,
+    SourceRange,
+    offset_to_location,
+    offsets_to_range,
+)
 from .utils.graph.graph_builder import build_dependency_graph, create_export
 from .utils.parser.value_classifier import classify_value
 from .utils.serialization.serializer import to_export, to_json, to_json_export, to_yaml_document
@@ -109,7 +115,10 @@ __all__ = [
     "create_export",
     # Errors
     "ParseError",
+    "SourceLocation",
+    "SourceRange",
     "offset_to_location",
+    "offsets_to_range",
     # Utilities
     "classify_value",
     "parse_type_constraint",

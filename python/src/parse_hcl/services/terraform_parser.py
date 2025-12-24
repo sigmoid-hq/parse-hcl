@@ -21,6 +21,7 @@ from ..parsers.output_parser import OutputParser
 from ..parsers.variable_parser import VariableParser
 from ..types import DirectoryParseResult, FileParseResult, TerraformDocument, create_empty_document
 from ..utils.common.fs import is_directory, list_terraform_files, path_exists, read_text_file
+from ..utils.common.logger import info
 from ..utils.lexer.block_scanner import BlockScanner
 from .terraform_json_parser import TerraformJsonParser
 
@@ -83,8 +84,10 @@ class TerraformParser:
             5
         """
         if file_path.endswith(".tf.json"):
+            info(f"Parsing Terraform JSON file: {file_path}")
             return self.json_parser.parse_file(file_path)
 
+        info(f"Parsing Terraform file: {file_path}")
         content = read_text_file(file_path)
         blocks = self.scanner.scan(content, file_path)
         document = create_empty_document()

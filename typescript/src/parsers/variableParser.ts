@@ -141,12 +141,15 @@ export function parseTypeConstraint(raw: string): TypeConstraint {
     // Check for tuple([T1, T2, ...])
     const tupleMatch = trimmed.match(/^tuple\s*\(\s*\[([\s\S]*)\]\s*\)$/);
     if (tupleMatch) {
-        // For tuples, we store element types as a special structure
-        // Using 'element' to store the first type for simplicity
-        return {
+        const elements = parseTupleElements(tupleMatch[1]);
+        const result: TypeConstraint = {
             base: 'tuple',
             raw: trimmed
         };
+        if (elements.length > 0) {
+            result.elements = elements;
+        }
+        return result;
     }
 
     // Check for object({ attr = type, ... })
@@ -162,6 +165,58 @@ export function parseTypeConstraint(raw: string): TypeConstraint {
 
     // Default: treat as unknown/complex type expression
     return { base: trimmed, raw: trimmed };
+}
+
+/**
+ * Parses tuple element types from the inner content of a tuple type.
+ * @param inner - The content inside tuple([ ... ])
+ * @returns Array of TypeConstraints for each element
+ */
+function parseTupleElements(inner: string): TypeConstraint[] {
+    const elements: TypeConstraint[] = [];
+    const trimmed = inner.trim();
+
+    if (!trimmed) {
+        return elements;
+    }
+
+    // Split by commas, respecting nested structures
+    let depth = 0;
+    let current = '';
+    const entries: string[] = [];
+
+    for (let i = 0; i < trimmed.length; i++) {
+        const char = trimmed[i];
+
+        if (char === '(' || char === '{' || char === '[') {
+            depth++;
+            current += char;
+        } else if (char === ')' || char === '}' || char === ']') {
+            depth--;
+            current += char;
+        } else if (char === ',' && depth === 0) {
+            const entry = current.trim();
+            if (entry) {
+                entries.push(entry);
+            }
+            current = '';
+        } else {
+            current += char;
+        }
+    }
+
+    // Don't forget the last entry
+    const final = current.trim();
+    if (final) {
+        entries.push(final);
+    }
+
+    // Parse each element type
+    for (const entry of entries) {
+        elements.push(parseTypeConstraint(entry));
+    }
+
+    return elements;
 }
 
 /**

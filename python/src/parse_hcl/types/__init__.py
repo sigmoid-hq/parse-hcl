@@ -305,6 +305,7 @@ class TypeConstraint(TypedDict, total=False):
 
     base: str
     element: "TypeConstraint"
+    elements: List["TypeConstraint"]
     attributes: Dict[str, "TypeConstraint"]
     optional: bool
     raw: str

@@ -275,6 +275,8 @@ export interface TypeConstraint {
     base: string;
     /** Element type for collection types */
     element?: TypeConstraint;
+    /** Element types for tuple types */
+    elements?: TypeConstraint[];
     /** Attribute types for object types */
     attributes?: Record<string, TypeConstraint>;
     /** Whether the type is optional (for object attributes) */
