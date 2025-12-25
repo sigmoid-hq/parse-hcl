@@ -6,6 +6,7 @@ from typing import Any, Dict, List
 
 from .services.artifact_parsers import TfPlanParser, TfStateParser, TfVarsParser
 from .services.terraform_parser import TerraformParser
+from .utils.output_metadata import annotate_output_metadata
 from .utils.serialization.serializer import to_json, to_json_export, to_yaml_document
 
 DEFAULT_SINGLE_BASENAME = "parse-hcl-output"
@@ -126,17 +127,24 @@ def emit_single(file_path: Path, data: Any, opts: Dict[str, Any]) -> None:
 
 def emit_directory(dir_path: Path, files: List[Dict[str, Any]], combined_doc: Dict[str, Any], opts: Dict[str, Any]) -> None:
     ext = _ext(opts["format"])
+    per_file_base = _resolve_per_file_base(opts) if opts.get("split") else None
+    annotate_output_metadata(
+        dir_path=str(dir_path),
+        files=files,
+        per_file_base=per_file_base,
+        ext=ext,
+        cwd=Path.cwd(),
+    )
     combined_data = combined_doc if opts.get("graph") else {"combined": combined_doc, "files": files if opts.get("split") else []}
     combined_rendered = _render(combined_data, opts)
     combined_default = f"{DEFAULT_COMBINED_BASENAME}{ext}"
     combined_target = _resolve_out_path(opts.get("out"), combined_default, opts["format"], is_dir_mode=True)
     _write_file(combined_target, combined_rendered)
 
-    if opts.get("split"):
-        base_dir = _resolve_per_file_base(opts)
+    if opts.get("split") and per_file_base:
         for file_result in files:
-            rel_path = Path(file_result["path"]).resolve().relative_to(dir_path)
-            per_file_target = base_dir / Path(f"{rel_path}{ext}")
+            rel_path = file_result.get("relative_path") or Path(file_result["path"]).resolve().relative_to(dir_path)
+            per_file_target = per_file_base / Path(f"{rel_path}{ext}")
             rendered = _render(file_result["document"], opts)
             _write_file(per_file_target, rendered)
 

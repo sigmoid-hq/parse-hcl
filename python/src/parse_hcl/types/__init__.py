@@ -345,6 +345,8 @@ class ModuleBlock(TypedDict):
 
     name: str
     properties: Dict[str, Value]
+    source_raw: NotRequired[str]
+    source_output_dir: NotRequired[str]
     raw: str
     source: str
 
@@ -484,6 +486,9 @@ class FileParseResult(TypedDict):
     """Result of parsing a single file."""
 
     path: str
+    relative_path: NotRequired[str]
+    output_path: NotRequired[str]
+    output_dir: NotRequired[str]
     document: TerraformDocument
 
 

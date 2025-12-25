@@ -1,3 +1,4 @@
+import os
 import sys
 from pathlib import Path
 import unittest
@@ -7,6 +8,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from parse_hcl import TerraformParser, to_json, to_yaml_document  # noqa: E402
 from parse_hcl.utils.common.fs import list_terraform_files  # noqa: E402
+from parse_hcl.utils.output_metadata import annotate_output_metadata  # noqa: E402
 
 
 class TerraformParserTest(unittest.TestCase):
@@ -41,9 +43,9 @@ class TerraformParserTest(unittest.TestCase):
         discovered = list_terraform_files(str(self.fixtures))
         result = self.parser.parse_directory(str(self.fixtures))
 
-        self.assertEqual(len(discovered), 7)
+        self.assertEqual(len(discovered), 9)
         self.assertTrue(any(str(Path(f).name) == "child.tf" for f in discovered))
-        self.assertEqual(len(result["files"]), 7)
+        self.assertEqual(len(result["files"]), 9)
         self.assertTrue(any("child.tf" in f["path"] for f in result["files"]))
         self.assertGreaterEqual(len(result["combined"]["data"]), 2)
         self.assertGreaterEqual(len(result["combined"]["resource"]), 6)
@@ -81,6 +83,30 @@ class TerraformParserTest(unittest.TestCase):
         self.assertEqual(len(doc["moved"]), 1)
         self.assertEqual(len(doc["import"]), 1)
         self.assertEqual(len(doc["check"]), 1)
+
+    def test_attaches_relative_paths_for_split_outputs(self) -> None:
+        per_file_base = Path("parse-hcl-output/files").resolve()
+        result = self.parser.parse_directory(str(self.fixtures))
+
+        annotate_output_metadata(
+            dir_path=str(self.fixtures),
+            files=result["files"],
+            per_file_base=per_file_base,
+            ext=".json",
+            cwd=Path.cwd(),
+        )
+
+        module_file = next((f for f in result["files"] if f["path"].endswith(str(Path("module_local/main.tf")))), None)
+        self.assertIsNotNone(module_file)
+        self.assertEqual(module_file.get("relative_path"), str(Path("module_local/main.tf")))
+
+        expected_output = os.path.relpath(per_file_base / "module_local" / "main.tf.json", Path.cwd())
+        self.assertEqual(module_file.get("output_path"), expected_output if expected_output else ".")
+
+        module_block = module_file["document"]["module"][0]
+        self.assertEqual(module_block.get("source_raw"), "./modules/simple")
+        expected_dir = os.path.relpath(per_file_base / "module_local" / "modules" / "simple", Path.cwd())
+        self.assertEqual(module_block.get("source_output_dir"), expected_dir if expected_dir else ".")
 
 
 if __name__ == "__main__":

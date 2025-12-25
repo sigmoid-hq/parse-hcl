@@ -205,6 +205,10 @@ export interface ModuleBlock {
     name: string;
     /** All properties defined in the block (including source, version, etc.) */
     properties: Record<string, Value>;
+    /** Raw source string as written in HCL (useful when a resolved output dir is added) */
+    source_raw?: string;
+    /** Relative path to the per-file parse output for the referenced source directory (when available) */
+    source_output_dir?: string;
     /** The original raw text */
     raw: string;
     /** Source file path */
@@ -433,6 +437,12 @@ export function createEmptyDocument(): TerraformDocument {
 export interface FileParseResult {
     /** The file path */
     path: string;
+    /** Path relative to the parsed directory root */
+    relative_path?: string;
+    /** Relative path (from cwd) to the per-file parse output */
+    output_path?: string;
+    /** Relative directory containing the per-file parse output */
+    output_dir?: string;
     /** The parsed document */
     document: TerraformDocument;
 }

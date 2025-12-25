@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 import fs from 'fs';
 import path from 'path';
-import { TerraformDocument } from './types/blocks';
+import { FileParseResult, TerraformDocument } from './types/blocks';
 import { TerraformParser } from './services/terraformParser';
 import { TfVarsParser, TfStateParser, TfPlanParser } from './services/artifactParsers';
 import { toJson, toJsonExport, toYamlDocument } from './utils/serialization/serializer';
+import { annotateOutputMetadata } from './utils/outputMetadata';
 
 interface CliOptions {
     file?: string;
@@ -115,11 +116,21 @@ function emitSingle(filePath: string, data: unknown, opts: CliOptions): void {
 
 function emitDirectory(
     dirPath: string,
-    files: { path: string; document: TerraformDocument }[],
+    files: FileParseResult[],
     combinedDoc: TerraformDocument,
     opts: CliOptions
 ): void {
     const ext = getExt(opts.format);
+    const perFileBase = opts.split ? resolvePerFileBase(opts) : undefined;
+
+    annotateOutputMetadata({
+        dirPath,
+        files,
+        perFileBase,
+        ext,
+        cwd: process.cwd()
+    });
+
     const combinedData = opts.graph ? combinedDoc : { combined: combinedDoc, files: opts.split ? files : [] };
     const combinedRendered = render(combinedData, opts);
     const combinedDefaultName = `${DEFAULT_COMBINED_BASENAME}${ext}`;
@@ -127,11 +138,10 @@ function emitDirectory(
 
     writeFile(combinedTarget, combinedRendered);
 
-    if (opts.split) {
-        const baseDir = resolvePerFileBase(opts);
+    if (opts.split && perFileBase) {
         files.forEach((file) => {
-            const relPath = path.relative(dirPath, path.resolve(file.path));
-            const perFileTarget = path.join(baseDir, `${relPath}${ext}`);
+            const relPath = file.relative_path ?? path.relative(dirPath, path.resolve(file.path));
+            const perFileTarget = path.join(perFileBase, `${relPath}${ext}`);
             const rendered = render(file.document, opts);
             writeFile(perFileTarget, rendered);
         });

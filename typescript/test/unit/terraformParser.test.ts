@@ -1,6 +1,7 @@
 import path from 'path';
 import { describe, expect, it } from 'vitest';
 import { TerraformParser, toJson, toYamlDocument } from '../../src';
+import { annotateOutputMetadata } from '../../src/utils/outputMetadata';
 import { listTerraformFiles } from '../../src/utils/common/fs';
 
 const fixturesDir = path.join(__dirname, '..', 'fixtures');
@@ -42,9 +43,9 @@ describe('TerraformParser', () => {
         const discovered = listTerraformFiles(fixturesDir);
         const result = parser.parseDirectory(fixturesDir);
 
-        expect(discovered.length).toBe(7);
+        expect(discovered.length).toBe(9);
         expect(discovered.some((file) => file.includes(path.join('nested', 'child.tf')))).toBe(true);
-        expect(result.files.length).toBe(7);
+        expect(result.files.length).toBe(9);
         expect(result.files.some((file) => file.path.includes(path.join('nested', 'child.tf')))).toBe(true);
         expect(result.combined?.data).toHaveLength(2);
         expect(result.combined?.resource.length).toBeGreaterThanOrEqual(6);
@@ -96,5 +97,31 @@ describe('TerraformParser', () => {
         expect(doc.moved).toHaveLength(1);
         expect(doc.import).toHaveLength(1);
         expect(doc.check).toHaveLength(1);
+    });
+
+    it('attaches relative output paths for per-file results and module sources', () => {
+        const perFileBase = path.resolve('parse-hcl-output/files');
+        const result = parser.parseDirectory(fixturesDir);
+
+        annotateOutputMetadata({
+            dirPath: fixturesDir,
+            files: result.files,
+            perFileBase,
+            ext: '.json',
+            cwd: process.cwd()
+        });
+
+        const moduleFile = result.files.find((file) => file.path.endsWith(path.join('module_local', 'main.tf')));
+        expect(moduleFile).toBeDefined();
+        expect(moduleFile?.relative_path).toBe(path.join('module_local', 'main.tf'));
+        expect(moduleFile?.output_path).toBe(
+            path.relative(process.cwd(), path.join(perFileBase, 'module_local', 'main.tf.json')) || '.'
+        );
+
+        const moduleBlock = moduleFile?.document.module[0];
+        expect(moduleBlock?.source_raw).toBe('./modules/simple');
+        expect(moduleBlock?.source_output_dir).toBe(
+            path.relative(process.cwd(), path.join(perFileBase, 'module_local', 'modules', 'simple')) || '.'
+        );
     });
 });
