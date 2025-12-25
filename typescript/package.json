@@ -1,7 +1,7 @@
 {
     "name": "parse-hcl",
-    "version": "0.2.0",
-    "description": "Lightweight HCL parser focused on identifying and classifying blocks. Supports common Terraform blocks (resource, variable, output, locals, etc.) for tooling and automation.",
+    "version": "1.0.0",
+    "description": "CLI-first Terraform/HCL parser with JSON/YAML output, dependency graph export, and per-file metadata for IaC tooling.",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
     "exports": {
@@ -27,10 +27,18 @@
     "keywords": [
         "terraform",
         "hcl",
-        "parser",
+        "terraform parser",
+        "iac",
+        "infrastructure-as-code",
         "tfvars",
         "tfstate",
-        "plan"
+        "plan",
+        "plan.json",
+        "cli",
+        "json",
+        "yaml",
+        "dependency graph",
+        "static analysis"
     ],
     "sideEffects": false,
     "engines": {
