@@ -1,6 +1,6 @@
 {
     "name": "parse-hcl",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "description": "CLI-first Terraform/HCL parser with JSON/YAML output, dependency graph export, and per-file metadata for IaC tooling.",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
