@@ -26,6 +26,39 @@ const TRAVERSAL_PATTERN = /[A-Za-z_][\w-]*(?:\[(?:[^[\]]*|\*)])?(?:\.[A-Za-z_][\
 const SPLAT_PATTERN = /\[\*]/g;
 
 /**
+ * Removes bracketed index notation (e.g., [0], ["key"], [*]) without using regex.
+ * Falls back to returning the original string if brackets are unbalanced.
+ */
+function stripIndexNotation(part: string): string {
+    const firstBracket = part.indexOf('[');
+    if (firstBracket === -1) {
+        return part;
+    }
+
+    let result = part.slice(0, firstBracket);
+    let cursor = firstBracket;
+
+    while (cursor < part.length) {
+        const closingBracket = part.indexOf(']', cursor + 1);
+        if (closingBracket === -1) {
+            result += part.slice(cursor);
+            break;
+        }
+
+        const nextBracket = part.indexOf('[', closingBracket + 1);
+        if (nextBracket === -1) {
+            result += part.slice(closingBracket + 1);
+            break;
+        }
+
+        result += part.slice(closingBracket + 1, nextBracket);
+        cursor = nextBracket;
+    }
+
+    return result;
+}
+
+/**
  * Classifies a raw HCL value string into a typed Value structure.
  * Supports literals, quoted strings, arrays, objects, and expressions.
  *
@@ -377,7 +410,7 @@ function extractReferencesFromText(raw: string): Reference[] {
     for (const match of matches) {
         // Remove index notation for parsing, but track if it has splat
         const hasSplat = match.includes('[*]');
-        const parts = match.split('.').map((part) => part.replace(/\[[^\]]*]/g, ''));
+        const parts = match.split('.').map((part) => stripIndexNotation(part));
 
         // var.name
         if (parts[0] === 'var' && parts[1]) {
