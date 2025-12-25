@@ -8,16 +8,6 @@ A lightweight, zero-dependency Terraform/HCL parser CLI and library for TypeScri
 
 Extracts and analyzes Terraform configuration blocks, builds dependency graphs, and outputs structured JSON/YAML — perfect for building IaC tooling, linters, documentation generators, and CI/CD integrations.
 
-## Features
-
-- **Zero dependencies** — No external runtime dependencies in both TypeScript and Python
-- **CLI-first design** — Powerful command-line interface for instant Terraform analysis
-- **Dual language support** — Feature-parity between TypeScript/Node.js and Python implementations
-- **Multiple file formats** — Parses `.tf`, `.tf.json`, `.tfvars`, `.tfstate`, and `plan.json`
-- **Dependency graph** — Automatically builds resource dependency graphs with reference tracking
-- **Flexible output** — JSON and YAML serialization with optional pruning
-- **Expression analysis** — Detects variables, locals, resources, data sources, and module references
-
 ## Quick Start
 
 ### Installation
@@ -105,6 +95,21 @@ parse-hcl --file <path> | --dir <path> [options]
 - When split outputs are written, each `files` entry now includes `relative_path`, `output_path`, and `output_dir` (all relative). Module blocks include `source_raw` (as written) and, when local, `source_output_dir`, pointing to the per-file output directory for that module.
 - Warnings and usage go to stderr. The CLI exits non-zero on invalid arguments or parsing failures.
 - `--format` affects every output shape; `--no-prune` keeps empty arrays/objects that are removed by default for compactness.
+
+## Features
+
+- **Zero dependencies** — No external runtime dependencies in both TypeScript and Python
+- **CLI-first design** — Powerful command-line interface for instant Terraform analysis
+- **Dual language support** — Feature-parity between TypeScript/Node.js and Python implementations
+- **Multiple file formats** — Parses `.tf`, `.tf.json`, `.tfvars`, `.tfstate`, and `plan.json`
+- **Dependency graph** — Automatically builds resource dependency graphs with reference tracking
+- **Flexible output** — JSON and YAML serialization with optional pruning
+- **Expression analysis** — Detects variables, locals, resources, data sources, and module references
+
+## Language-Specific Docs
+
+- TypeScript/Node.js: [typescript/README.md](typescript/README.md)
+- Python: [python/README.md](python/README.md)
 
 ### Examples
 

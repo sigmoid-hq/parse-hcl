@@ -1,6 +1,6 @@
 {
     "name": "parse-hcl",
-    "version": "0.1.1",
+    "version": "0.2.0",
     "description": "Lightweight HCL parser focused on identifying and classifying blocks. Supports common Terraform blocks (resource, variable, output, locals, etc.) for tooling and automation.",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
