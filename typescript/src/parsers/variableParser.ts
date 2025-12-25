@@ -117,9 +117,9 @@ export function parseTypeConstraint(raw: string): TypeConstraint {
     }
 
     // Check for collection types: list(T), set(T), map(T)
-    const collectionMatch = trimmed.match(/^(list|set|map)\s*\(\s*([\s\S]*)\s*\)$/);
+    const collectionMatch = matchWrappedKeyword(trimmed, ['list', 'set', 'map']);
     if (collectionMatch) {
-        const [, base, inner] = collectionMatch;
+        const { keyword: base, inner } = collectionMatch;
         return {
             base,
             element: parseTypeConstraint(inner),
@@ -128,9 +128,9 @@ export function parseTypeConstraint(raw: string): TypeConstraint {
     }
 
     // Check for optional(T)
-    const optionalMatch = trimmed.match(/^optional\s*\(\s*([\s\S]*)\s*\)$/);
-    if (optionalMatch) {
-        const inner = parseTypeConstraint(optionalMatch[1]);
+    const optionalInner = extractWrappedType(trimmed, 'optional');
+    if (optionalInner !== null) {
+        const inner = parseTypeConstraint(optionalInner);
         return {
             ...inner,
             optional: true,
@@ -165,6 +165,73 @@ export function parseTypeConstraint(raw: string): TypeConstraint {
 
     // Default: treat as unknown/complex type expression
     return { base: trimmed, raw: trimmed };
+}
+
+/**
+ * Attempts to extract the inner portion of a keyword-wrapped type expression (e.g., list(...)).
+ * @param trimmed - The trimmed raw type string
+ * @param keywords - Keywords to try matching against
+ * @returns Matched keyword and inner content if found, otherwise null
+ */
+function matchWrappedKeyword(trimmed: string, keywords: string[]): { keyword: string; inner: string } | null {
+    for (const keyword of keywords) {
+        const inner = extractWrappedType(trimmed, keyword);
+        if (inner !== null) {
+            return { keyword, inner };
+        }
+    }
+
+    return null;
+}
+
+/**
+ * Extracts inner content from a keyword-wrapped expression while respecting nested parentheses.
+ * Returns null if the pattern does not match exactly or parentheses are unbalanced.
+ * @param trimmed - The trimmed raw type string
+ * @param keyword - The keyword to match (e.g., "list")
+ * @returns Inner content if matched, otherwise null
+ */
+function extractWrappedType(trimmed: string, keyword: string): string | null {
+    if (!trimmed.startsWith(keyword)) {
+        return null;
+    }
+
+    let index = keyword.length;
+
+    while (index < trimmed.length && isWhitespace(trimmed[index])) {
+        index++;
+    }
+
+    if (index >= trimmed.length || trimmed[index] !== '(') {
+        return null;
+    }
+
+    index++;
+    let depth = 1;
+    const start = index;
+
+    while (index < trimmed.length && depth > 0) {
+        const char = trimmed[index];
+        if (char === '(') {
+            depth++;
+        } else if (char === ')') {
+            depth--;
+        }
+        index++;
+    }
+
+    if (depth !== 0) {
+        return null;
+    }
+
+    const inner = trimmed.slice(start, index - 1).trim();
+    const remainder = trimmed.slice(index).trim();
+
+    if (remainder.length > 0) {
+        return null;
+    }
+
+    return inner;
 }
 
 /**
@@ -260,12 +327,29 @@ function parseObjectTypeAttributes(inner: string): Record<string, TypeConstraint
 
     // Parse each entry (format: "name = type" or "name = optional(type)")
     for (const entry of entries) {
-        const match = entry.match(/^(\w+)\s*=\s*([\s\S]+)$/);
-        if (match) {
-            const [, attrName, attrType] = match;
-            attributes[attrName] = parseTypeConstraint(attrType);
+        const equalsIndex = entry.indexOf('=');
+        if (equalsIndex === -1) {
+            continue;
         }
+
+        const attrName = entry.slice(0, equalsIndex).trim();
+        const attrType = entry.slice(equalsIndex + 1).trim();
+
+        if (!/^\w+$/.test(attrName) || !attrType) {
+            continue;
+        }
+
+        attributes[attrName] = parseTypeConstraint(attrType);
     }
 
     return attributes;
+}
+
+/**
+ * Determines if a character is whitespace without regex backtracking.
+ * @param char - The character to evaluate
+ * @returns True if whitespace
+ */
+function isWhitespace(char: string): boolean {
+    return char === ' ' || char === '\t' || char === '\n' || char === '\r' || char === '\f';
 }

@@ -225,7 +225,7 @@ function detectExpressionKind(raw: string): ExpressionKind {
     }
 
     // For expression (list or map comprehension)
-    if (/^\[\s*for\s+.+\s+in\s+.+:\s+/.test(raw) || /^\{\s*for\s+.+\s+in\s+.+:\s+/.test(raw)) {
+    if (looksLikeForExpression(raw)) {
         return 'for_expr';
     }
 
@@ -298,6 +298,46 @@ function hasConditionalOperator(raw: string): boolean {
 }
 
 /**
+ * Detects whether an expression resembles a list or map comprehension without using
+ * potentially expensive regular expressions.
+ * @param raw - The raw expression string
+ * @returns True if the expression looks like a for-expression
+ */
+function looksLikeForExpression(raw: string): boolean {
+    if (!(raw.startsWith('[') || raw.startsWith('{'))) {
+        return false;
+    }
+
+    // Quick fail if there is no colon separator
+    if (!raw.includes(':')) {
+        return false;
+    }
+
+    const inner = raw.slice(1).trimStart();
+    if (!inner.startsWith('for')) {
+        return false;
+    }
+
+    let rest = inner.slice(3).trimStart();
+    if (!rest) {
+        return false;
+    }
+
+    const inMatch = rest.match(/\s+in\s+/);
+    if (!inMatch || inMatch.index === undefined) {
+        return false;
+    }
+
+    const afterIn = rest.slice(inMatch.index + inMatch[0].length);
+    if (!afterIn.includes(':')) {
+        return false;
+    }
+
+    const afterColon = afterIn.slice(afterIn.indexOf(':') + 1).trimStart();
+    return afterColon.length > 0;
+}
+
+/**
  * Extracts references from an expression.
  * @param raw - The raw expression string
  * @param kind - The expression kind
@@ -308,10 +348,8 @@ function extractExpressionReferences(raw: string, kind: ExpressionKind): Referen
 
     // For templates, also extract from interpolated expressions
     if (kind === 'template') {
-        const interpolationMatches = raw.match(/\${([^}]+)}/g) || [];
-        const innerRefs = interpolationMatches.flatMap((expr) =>
-            extractReferencesFromText(expr.replace(/^\${|}$/g, ''))
-        );
+        const interpolationMatches = extractInterpolations(raw);
+        const innerRefs = interpolationMatches.flatMap((expr) => extractReferencesFromText(stripInterpolation(expr)));
         return uniqueReferences([...baseRefs, ...innerRefs]);
     }
 
@@ -339,7 +377,7 @@ function extractReferencesFromText(raw: string): Reference[] {
     for (const match of matches) {
         // Remove index notation for parsing, but track if it has splat
         const hasSplat = match.includes('[*]');
-        const parts = match.split('.').map((part) => part.replace(/\[.*?]/g, ''));
+        const parts = match.split('.').map((part) => part.replace(/\[[^\]]*]/g, ''));
 
         // var.name
         if (parts[0] === 'var' && parts[1]) {
@@ -429,6 +467,46 @@ function extractSpecialReferences(raw: string): Reference[] {
     }
 
     return refs;
+}
+
+/**
+ * Extracts raw interpolation strings (e.g., ${foo.bar}) using simple scanning to
+ * avoid backtracking risks from regular expressions.
+ * @param raw - The raw template string
+ * @returns Array of interpolation substrings including delimiters
+ */
+function extractInterpolations(raw: string): string[] {
+    const matches: string[] = [];
+    let searchIndex = 0;
+
+    while (searchIndex < raw.length) {
+        const start = raw.indexOf('${', searchIndex);
+        if (start === -1) {
+            break;
+        }
+
+        const end = raw.indexOf('}', start + 2);
+        if (end === -1) {
+            break;
+        }
+
+        matches.push(raw.slice(start, end + 1));
+        searchIndex = end + 1;
+    }
+
+    return matches;
+}
+
+/**
+ * Removes interpolation delimiters from a matched interpolation.
+ * @param expr - The interpolation substring (e.g., ${foo})
+ * @returns The inner expression without delimiters
+ */
+function stripInterpolation(expr: string): string {
+    if (expr.startsWith('${') && expr.endsWith('}')) {
+        return expr.slice(2, -1);
+    }
+    return expr;
 }
 
 /**
