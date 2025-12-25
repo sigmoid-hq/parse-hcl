@@ -86,6 +86,24 @@ parse-hcl --file <path> | --dir <path> [options]
 | `--format <type>` | Output format: `json` or `yaml` | `json` |
 | `--graph` | Include dependency graph in output | `false` |
 | `--no-prune` | Keep empty arrays/objects in output | `false` |
+| `--out <path>` | Save output to file (or directory for combined output) | `./parse-hcl-output*.{json,yaml}` |
+| `--out-dir <dir>` | Save per-file results under this directory (directory mode) | `./parse-hcl-output/files` |
+| `--split` / `--no-split` | Enable/disable per-file saving in directory mode | `true` |
+| `--stdout` / `--no-stdout` | Also print to stdout (default off) | `false` |
+
+### Behavior and Defaults
+
+- You must provide either `--file` or `--dir`; when both are present, `--file` is used. Missing inputs print usage to stderr and exit with code `1`.
+- **Default output is files, stdout off.**  
+  - Single file: writes `./parse-hcl-output.{json|yaml}`.  
+  - Directory: writes combined `./parse-hcl-output.combined.{json|yaml}` and per-file under `./parse-hcl-output/files/<relative-path>.{json|yaml}`.  
+  - Add `--stdout` to also print.
+- `--out` overrides the combined/single output path. If it points to a directory, the tool writes `output.{json|yaml}` (single file) or `combined.{json|yaml}` (directory). If no extension is given, one is added based on `--format`.
+- `--out-dir` sets the root for per-file outputs (directory mode). If omitted but `--out` is provided, per-file results go under `per-file/` next to the `--out` target. Disable per-file writes with `--no-split`.
+- `--file` auto-detects artifacts: paths containing `tfvars` use the tfvars parser, `.tfstate` files use the state parser, and `plan.json` uses the plan parser. Other files are treated as Terraform configs. The `--graph` flag only applies to Terraform configs; artifact parsers ignore it and return the raw parse.
+- `--dir` recursively parses only `.tf` and `.tf.json` files, skipping `.terraform`, `.git`, and `node_modules`. The default output includes `combined` (aggregated document) and `files` (per-file results). With `--graph`, the dependency graph is built from the aggregated document.
+- Warnings and usage go to stderr. The CLI exits non-zero on invalid arguments or parsing failures.
+- `--format` affects every output shape; `--no-prune` keeps empty arrays/objects that are removed by default for compactness.
 
 ### Examples
 
@@ -172,6 +190,32 @@ $ parse-hcl --file terraform.tfvars
 **Parse entire directory:**
 ```bash
 $ parse-hcl --dir ./infrastructure --format yaml
+```
+
+**Default saved outputs (no flags):**
+```bash
+$ ls parse-hcl-output*
+parse-hcl-output.combined.json
+parse-hcl-output/files/main.tf.json
+parse-hcl-output/files/modules/vpc/variables.tf.json
+```
+
+**Directory output structure (`--dir` + `--stdout`):**
+```bash
+$ parse-hcl --dir ./infrastructure --stdout | jq 'keys'
+# ["combined","files"]
+```
+
+```json
+{
+  "combined": { "resource": [...], "variable": [...], "output": [...], "locals": [...] },
+  "files": [
+    {
+      "path": "/abs/path/main.tf",
+      "document": { "resource": [...], "locals": [...], "output": [...], "terraform": [...] }
+    }
+  ]
+}
 ```
 
 ## Supported Terraform Blocks
